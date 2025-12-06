@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using System.Reflection.Metadata;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -110,7 +109,7 @@ public class Program
 
     #region Tool: list tools
 
-    private static async Task HandleListTools(JsonRcpRequest request)
+    private static Task HandleListTools(JsonRcpRequest request)
     {
         var tools = new object[]
         {
@@ -118,7 +117,7 @@ public class Program
             {
                 name = "echo",
                 description = "Echoes the input text.",
-                InputSchema = new
+                inputSchema = new
                 {
                     type = "object",
                     properties = new
@@ -132,15 +131,31 @@ public class Program
             {
                 name = "generate_pr_patch",
                 description = "Fetches latest from git and generates a patch file diffing baseBranch...featureBranch.",
-                InputSchema = new
+                inputSchema = new
                 {
                     type = "object",
                     properties = new
                     {
-                        baseBranch = new { type = "string", description = "The base branch name (e.g., 'main')." },
-                        featureBranch = new { type = "string", description = "The feature branch name (e.g., 'feature/acqverse/tmbb')." },
-                        patchFileName = new { type = "string", description = "Optional patch file name (default: 'pr.patch')." },
-                        remote = new { type = "string", description = "Optional git remote (default: 'origin')." },
+                        baseBranch = new
+                        {
+                            type = "string",
+                            description = "The base branch name (e.g., 'main').",
+                        },
+                        featureBranch = new
+                        {
+                            type = "string",
+                            description = "The feature branch name (e.g., 'feature/acqverse/tmbb').",
+                        },
+                        patchFileName = new
+                        {
+                            type = "string",
+                            description = "Optional patch file name (default: 'pr.patch').",
+                        },
+                        remote = new
+                        {
+                            type = "string",
+                            description = "Optional git remote (default: 'origin').",
+                        },
                     },
                     required = new[] { "baseBranch", "featureBranch" },
                 },
@@ -150,6 +165,7 @@ public class Program
         var result = new { tools };
 
         WriteResult(request.Id, result);
+        return Task.CompletedTask;
     }
 
     #endregion
@@ -219,7 +235,12 @@ public class Program
     {
         if (arguments == null)
         {
-            WriteError(id, -32602, "Invalid params", "Missing arguments for generate_pr_patch tool.");
+            WriteError(
+                id,
+                -32602,
+                "Invalid params",
+                "Missing arguments for generate_pr_patch tool."
+            );
             return;
         }
 
@@ -238,7 +259,12 @@ public class Program
             || featureBranchElement.ValueKind != JsonValueKind.String
         )
         {
-            WriteError(id, -32602, "Invalid params", "Expected 'featureBranch' string in arguments.");
+            WriteError(
+                id,
+                -32602,
+                "Invalid params",
+                "Expected 'featureBranch' string in arguments."
+            );
             return;
         }
 
@@ -247,26 +273,47 @@ public class Program
 
         if (string.IsNullOrWhiteSpace(baseBranch) || string.IsNullOrWhiteSpace(featureBranch))
         {
-            WriteError(id, -32602, "Invalid params", "baseBranch and featureBranch must be non-empty strings.");
+            WriteError(
+                id,
+                -32602,
+                "Invalid params",
+                "baseBranch and featureBranch must be non-empty strings."
+            );
             return;
         }
 
         var remote = "origin";
-        if (arguments.Value.TryGetProperty("remote", out var remoteElement) && remoteElement.ValueKind == JsonValueKind.String)
+        if (
+            arguments.Value.TryGetProperty("remote", out var remoteElement)
+            && remoteElement.ValueKind == JsonValueKind.String
+        )
         {
             remote = remoteElement.GetString() ?? "origin";
         }
 
         var patchFileName = "pr.patch";
-        if (arguments.Value.TryGetProperty("patchFileName", out var patchFileElement) && patchFileElement.ValueKind == JsonValueKind.String)
+        if (
+            arguments.Value.TryGetProperty("patchFileName", out var patchFileElement)
+            && patchFileElement.ValueKind == JsonValueKind.String
+        )
         {
             patchFileName = patchFileElement.GetString() ?? "pr.patch";
         }
 
         // Basic safety: only allow branch names containing [a-zA-Z0-9/_-]
-        if (!IsValidBranchName(baseBranch) || !IsValidBranchName(featureBranch) || !IsValidBranchName(remote) || !IsValidFileName(patchFileName))
+        if (
+            !IsValidBranchName(baseBranch)
+            || !IsValidBranchName(featureBranch)
+            || !IsValidBranchName(remote)
+            || !IsValidFileName(patchFileName)
+        )
         {
-            WriteError(id, -32602, "Invalid params", "Branch names and patch file name contain invalid characters.");
+            WriteError(
+                id,
+                -32602,
+                "Invalid params",
+                "Branch names and patch file name contain invalid characters."
+            );
             return;
         }
 
@@ -281,7 +328,10 @@ public class Program
         }
 
         // Run git diff
-        var diffResult = await RunGitCommandAsync($"diff {remote}/{baseBranch}...{remote}/{featureBranch}", repoDir);
+        var diffResult = await RunGitCommandAsync(
+            $"diff {remote}/{baseBranch}...{remote}/{featureBranch}",
+            repoDir
+        );
         if (diffResult.ExitCode != 0)
         {
             WriteError(id, -32002, "git diff failed", diffResult.Output);
@@ -301,18 +351,12 @@ public class Program
         }
 
         // Return success
-        var resultText = $"Created patch file {patchFileName} comparing {remote}/{baseBranch}...{remote}/{featureBranch}. Please review this patch file using Copilot.";
+        var resultText =
+            $"Created patch file {patchFileName} comparing {remote}/{baseBranch}...{remote}/{featureBranch}. Please review this patch file using Copilot.";
         var result = new
         {
-            content = new[]
-            {
-                new
-                {
-                    type = "text",
-                    text = resultText
-                }
-            },
-            isError = false
+            content = new[] { new { type = "text", text = resultText } },
+            isError = false,
         };
 
         WriteResult(id, result);
@@ -329,10 +373,14 @@ public class Program
 
     private static bool IsValidFileName(string name)
     {
-        return System.Text.RegularExpressions.Regex.IsMatch(name, @"^[a-zA-Z0-9/_.-]+$") && !name.Contains("..");
+        return System.Text.RegularExpressions.Regex.IsMatch(name, @"^[a-zA-Z0-9/_.-]+$")
+            && !name.Contains("..");
     }
 
-    private static async Task<(int ExitCode, string Output)> RunGitCommandAsync(string arguments, string workingDirectory)
+    private static async Task<(int ExitCode, string Output)> RunGitCommandAsync(
+        string arguments,
+        string workingDirectory
+    )
     {
         var psi = new ProcessStartInfo
         {
@@ -351,12 +399,14 @@ public class Program
 
         process.OutputDataReceived += (_, e) =>
         {
-            if (e.Data != null) sb.AppendLine(e.Data);
+            if (e.Data != null)
+                sb.AppendLine(e.Data);
         };
 
         process.ErrorDataReceived += (_, e) =>
         {
-            if (e.Data != null) sb.AppendLine(e.Data);
+            if (e.Data != null)
+                sb.AppendLine(e.Data);
         };
 
         process.Start();
