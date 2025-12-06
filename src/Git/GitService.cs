@@ -25,15 +25,23 @@ namespace AzDoErrorMcpServer.Git;
 internal static partial class GitService
 {
     /// <summary>
+    /// Default timeout for git commands in seconds.
+    /// </summary>
+    private const int DefaultTimeoutSeconds = 60;
+
+    /// <summary>
     /// Runs a git command asynchronously and returns the exit code and combined output.
     /// Both stdout and stderr are captured to provide complete feedback.
+    /// Includes a 60-second timeout to prevent hanging on slow operations.
     /// </summary>
     /// <param name="arguments">The git command arguments (e.g., "fetch origin").</param>
     /// <param name="workingDirectory">The repository directory to run the command in.</param>
+    /// <param name="timeoutSeconds">Optional timeout in seconds (default: 60).</param>
     /// <returns>A tuple of (ExitCode, Output) where Output contains both stdout and stderr.</returns>
     public static async Task<(int ExitCode, string Output)> RunGitCommandAsync(
         string arguments,
-        string workingDirectory
+        string workingDirectory,
+        int timeoutSeconds = DefaultTimeoutSeconds
     )
     {
         var psi = new ProcessStartInfo
@@ -49,23 +57,44 @@ internal static partial class GitService
 
         using var process = new Process { StartInfo = psi };
         var output = new StringBuilder();
+        var outputLock = new object();
 
         process.OutputDataReceived += (_, e) =>
         {
             if (e.Data != null)
-                output.AppendLine(e.Data);
+            {
+                lock (outputLock)
+                {
+                    output.AppendLine(e.Data);
+                }
+            }
         };
 
         process.ErrorDataReceived += (_, e) =>
         {
             if (e.Data != null)
-                output.AppendLine(e.Data);
+            {
+                lock (outputLock)
+                {
+                    output.AppendLine(e.Data);
+                }
+            }
         };
 
         process.Start();
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
-        await process.WaitForExitAsync();
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds));
+        try
+        {
+            await process.WaitForExitAsync(cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            try { process.Kill(entireProcessTree: true); } catch { /* ignore kill errors */ }
+            return (-1, $"Git command timed out after {timeoutSeconds} seconds: git {arguments}");
+        }
 
         return (process.ExitCode, output.ToString());
     }

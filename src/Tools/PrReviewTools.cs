@@ -505,9 +505,6 @@ internal static partial class PrReviewTools
         // Auto-detect base branch if not provided
         if (string.IsNullOrWhiteSpace(baseBranch))
         {
-            // First fetch to ensure we have latest refs
-            await GitService.RunGitCommandAsync($"fetch {remote}", repoDir);
-
             var baseInfo = await GitService.FindBaseBranchAsync(repoDir, featureBranch, remote);
             if (baseInfo.HasValue)
             {
