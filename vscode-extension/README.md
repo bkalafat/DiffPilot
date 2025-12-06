@@ -4,6 +4,18 @@ AI-powered PR code review and developer productivity tools.
 
 ![DiffPilot](images/banner.png)
 
+## 🏢 On-Premise & Enterprise Ready
+
+DiffPilot runs **100% locally** on your machine - no cloud services, no external API calls, no data leaves your network.
+
+✅ **Air-Gapped Environments** - Works in isolated networks  
+✅ **Azure DevOps Server / TFS** - Full compatibility with on-premise Git  
+✅ **Banking & Financial** - Meets strict data residency requirements  
+✅ **Government & Defense** - No external dependencies  
+✅ **GDPR Compliant** - Your code never leaves your infrastructure  
+
+> **Perfect for organizations using on-premise Azure DevOps, TFS, or any local Git server.**
+
 ## Features
 
 🔍 **PR Review Tools**
@@ -73,6 +85,16 @@ DiffPilot scans for:
 
 - Requires .NET 9 SDK installed
 - Some features require an active Git repository
+
+## Why On-Premise Matters
+
+Many enterprises, especially in **banking, finance, and government sectors**, cannot use cloud-based tools due to:
+
+- **Regulatory Compliance** - Data must stay within national borders
+- **Security Policies** - No code or metadata can leave the network
+- **Air-Gapped Systems** - No internet connectivity allowed
+
+DiffPilot solves this by running entirely on your local machine. The MCP server processes everything locally, and the AI features work with your locally-hosted models or approved AI endpoints.
 
 ## Release Notes
 
