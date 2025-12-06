@@ -1,0 +1,216 @@
+{
+  "name": "diffpilot",
+  "displayName": "DiffPilot - AI PR Code Review",
+  "description": "AI-powered PR code review and developer productivity tools via MCP protocol",
+  "version": "1.0.0",
+  "publisher": "BurakKalafat",
+  "author": {
+    "name": "Burak Kalafat",
+    "url": "https://github.com/bkalafat"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bkalafat/DiffPilot"
+  },
+  "bugs": {
+    "url": "https://github.com/bkalafat/DiffPilot/issues"
+  },
+  "homepage": "https://github.com/bkalafat/DiffPilot#readme",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other",
+    "Linters",
+    "SCM Providers"
+  ],
+  "keywords": [
+    "pr",
+    "pull request",
+    "code review",
+    "ai",
+    "mcp",
+    "git",
+    "azure devops",
+    "tfs",
+    "diff",
+    "commit",
+    "changelog",
+    "secrets",
+    "security"
+  ],
+  "icon": "images/icon.png",
+  "galleryBanner": {
+    "color": "#667eea",
+    "theme": "dark"
+  },
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "diffpilot.getPrDiff",
+        "title": "DiffPilot: Get PR Diff",
+        "category": "DiffPilot"
+      },
+      {
+        "command": "diffpilot.reviewPrChanges",
+        "title": "DiffPilot: Review PR Changes",
+        "category": "DiffPilot"
+      },
+      {
+        "command": "diffpilot.generatePrTitle",
+        "title": "DiffPilot: Generate PR Title",
+        "category": "DiffPilot"
+      },
+      {
+        "command": "diffpilot.generatePrDescription",
+        "title": "DiffPilot: Generate PR Description",
+        "category": "DiffPilot"
+      },
+      {
+        "command": "diffpilot.generateCommitMessage",
+        "title": "DiffPilot: Generate Commit Message",
+        "category": "DiffPilot"
+      },
+      {
+        "command": "diffpilot.scanSecrets",
+        "title": "DiffPilot: Scan for Secrets",
+        "category": "DiffPilot"
+      },
+      {
+        "command": "diffpilot.getDiffStats",
+        "title": "DiffPilot: Get Diff Statistics",
+        "category": "DiffPilot"
+      },
+      {
+        "command": "diffpilot.suggestTests",
+        "title": "DiffPilot: Suggest Tests",
+        "category": "DiffPilot"
+      },
+      {
+        "command": "diffpilot.generateChangelog",
+        "title": "DiffPilot: Generate Changelog",
+        "category": "DiffPilot"
+      }
+    ],
+    "menus": {
+      "scm/title": [
+        {
+          "command": "diffpilot.generateCommitMessage",
+          "group": "diffpilot@1",
+          "when": "scmProvider == git"
+        },
+        {
+          "command": "diffpilot.scanSecrets",
+          "group": "diffpilot@2",
+          "when": "scmProvider == git"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "diffpilot.getPrDiff",
+          "when": "gitOpenRepositoryCount > 0"
+        },
+        {
+          "command": "diffpilot.reviewPrChanges",
+          "when": "gitOpenRepositoryCount > 0"
+        },
+        {
+          "command": "diffpilot.generatePrTitle",
+          "when": "gitOpenRepositoryCount > 0"
+        },
+        {
+          "command": "diffpilot.generatePrDescription",
+          "when": "gitOpenRepositoryCount > 0"
+        },
+        {
+          "command": "diffpilot.generateCommitMessage",
+          "when": "gitOpenRepositoryCount > 0"
+        },
+        {
+          "command": "diffpilot.scanSecrets",
+          "when": "gitOpenRepositoryCount > 0"
+        },
+        {
+          "command": "diffpilot.getDiffStats",
+          "when": "gitOpenRepositoryCount > 0"
+        },
+        {
+          "command": "diffpilot.suggestTests",
+          "when": "gitOpenRepositoryCount > 0"
+        },
+        {
+          "command": "diffpilot.generateChangelog",
+          "when": "gitOpenRepositoryCount > 0"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "DiffPilot",
+      "properties": {
+        "diffpilot.dotnetPath": {
+          "type": "string",
+          "default": "dotnet",
+          "description": "Path to dotnet executable"
+        },
+        "diffpilot.serverPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to DiffPilot server project (leave empty to use bundled server)"
+        },
+        "diffpilot.defaultBaseBranch": {
+          "type": "string",
+          "default": "main",
+          "description": "Default base branch for PR comparisons"
+        },
+        "diffpilot.prTitleStyle": {
+          "type": "string",
+          "enum": ["conventional", "descriptive", "ticket"],
+          "default": "conventional",
+          "description": "Style for generated PR titles"
+        },
+        "diffpilot.commitMessageStyle": {
+          "type": "string",
+          "enum": ["conventional", "simple"],
+          "default": "conventional",
+          "description": "Style for generated commit messages"
+        },
+        "diffpilot.includeChecklist": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include checklist in PR descriptions"
+        },
+        "diffpilot.scanOnSave": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically scan for secrets when files are saved"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile",
+    "test": "node ./out/test/runTest.js",
+    "lint": "eslint src --ext ts",
+    "package": "vsce package",
+    "publish": "vsce publish"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "@vscode/test-electron": "^2.3.8",
+    "@vscode/vsce": "^2.22.0",
+    "eslint": "^8.55.0",
+    "typescript": "^5.3.2"
+  },
+  "dependencies": {}
+}
