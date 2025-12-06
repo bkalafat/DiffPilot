@@ -57,3 +57,10 @@ Thumbs.db
 
 # Dependencies
 node_modules/
+
+# VS Code Extension
+vscode-extension/out/
+vscode-extension/node_modules/
+vscode-extension/*.vsix
+vscode-extension/.vscode-test/
+*.vsix

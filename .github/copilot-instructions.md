@@ -88,3 +88,33 @@ See `.github/instructions/dotnet9-best-practices.md` for:
 - Performance optimizations
 - Exception handling
 - Unit testing conventions
+
+## VS Code Extension
+
+The project includes a VS Code extension that wraps the MCP server for Marketplace distribution.
+
+### Extension Structure
+```
+vscode-extension/
+├── package.json              # Extension manifest
+├── src/
+│   ├── extension.ts          # Entry point
+│   └── client.ts             # MCP JSON-RPC client
+├── server/                   # Bundled DiffPilot source
+└── images/                   # Icons and banner
+```
+
+### Extension Commands
+```bash
+# Build VSIX package
+cd vscode-extension
+vsce package
+
+# Publish to Marketplace
+vsce publish
+```
+
+### Marketplace
+- **Publisher**: BurakKalafat
+- **Extension ID**: BurakKalafat.diffpilot
+- **URL**: https://marketplace.visualstudio.com/items?itemName=BurakKalafat.diffpilot

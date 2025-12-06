@@ -1,8 +1,10 @@
-# DiffPilot for Visual Studio Code
+# DiffPilot - MCP Server for Code Review
 
-AI-powered PR code review and developer productivity tools.
+**Model Context Protocol (MCP) Server** for AI-powered PR code review and developer productivity tools.
 
 ![DiffPilot](images/banner.png)
+
+> 🔌 **MCP Compatible** - Works with GitHub Copilot, Claude, and other MCP-enabled AI assistants
 
 ## 🏢 On-Premise & Enterprise Ready
 
