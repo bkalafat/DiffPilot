@@ -19,12 +19,12 @@ internal static class McpHandlers
     /// <summary>
     /// Server name used in serverInfo.
     /// </summary>
-    private const string ServerName = "AzDoErrorMcpServer";
+    private const string ServerName = "PRReviewMcpServer";
 
     /// <summary>
     /// Server version used in serverInfo.
     /// </summary>
-    private const string ServerVersion = "0.2.0";
+    private const string ServerVersion = "1.0.0";
 
     /// <summary>
     /// Protocol version we support.
@@ -49,9 +49,11 @@ internal static class McpHandlers
                 },
             },
             serverInfo = new { name = ServerName, version = ServerVersion },
-            instructions = "This MCP server provides git patch generation tools for code review workflows. "
-                + "Use generate_pr_patch to create a diff between specified branches, or "
-                + "generate_pr_patch_auto to auto-detect branches and generate a patch.",
+            instructions = "This MCP server provides PR code review tools. Available tools:\n"
+                + "- get_pr_diff: Get the raw diff between branches for any purpose\n"
+                + "- review_pr_changes: Get diff with instructions for AI code review\n"
+                + "- generate_pr_title: Generate a conventional PR title from changes\n"
+                + "- generate_pr_description: Generate a complete PR description with summary, changes, and testing notes",
         };
 
     /// <summary>
@@ -62,10 +64,12 @@ internal static class McpHandlers
     {
         var tools = new object[]
         {
+            // Tool 1: get_pr_diff - Raw diff for any purpose
             new
             {
-                name = "generate_pr_patch",
-                description = "Fetches latest from git and generates a patch file diffing baseBranch...featureBranch.",
+                name = "get_pr_diff",
+                description = "Fetches latest from git and returns the diff between base branch and current/feature branch. "
+                    + "Auto-detects branches if not specified. Returns raw diff output for any purpose.",
                 inputSchema = new
                 {
                     type = "object",
@@ -74,40 +78,97 @@ internal static class McpHandlers
                         baseBranch = new
                         {
                             type = "string",
-                            description = "The base branch name (e.g., 'main').",
+                            description = "The base branch name (e.g., 'main'). Auto-detected if not provided.",
                         },
                         featureBranch = new
                         {
                             type = "string",
-                            description = "The feature branch name (e.g., 'feature/acqverse/tmbb').",
-                        },
-                        patchFileName = new
-                        {
-                            type = "string",
-                            description = "Optional patch file name (default: 'pr.patch').",
+                            description = "The feature branch name. Defaults to current branch if not provided.",
                         },
                         remote = new
                         {
                             type = "string",
-                            description = "Optional git remote (default: 'origin').",
+                            description = "Git remote name (default: 'origin').",
                         },
                     },
-                    required = new[] { "baseBranch", "featureBranch" },
+                    required = Array.Empty<string>(),
                 },
             },
+            // Tool 2: review_pr_changes - Diff with review instructions
             new
             {
-                name = "generate_pr_patch_auto",
-                description = "Detects the base branch and current branch from git and generates a patch diffing baseBranch...featureBranch.",
+                name = "review_pr_changes",
+                description = "Gets the PR diff and provides it with instructions for AI code review. "
+                    + "Use this when you want to perform a code review on the changes.",
                 inputSchema = new
                 {
                     type = "object",
                     properties = new
                     {
-                        patchFileName = new
+                        baseBranch = new
                         {
                             type = "string",
-                            description = "Optional patch file name (default: 'pr-auto.patch').",
+                            description = "The base branch name (e.g., 'main'). Auto-detected if not provided.",
+                        },
+                        focusAreas = new
+                        {
+                            type = "string",
+                            description = "Optional focus areas for the review (e.g., 'security, performance, error handling').",
+                        },
+                    },
+                    required = Array.Empty<string>(),
+                },
+            },
+            // Tool 3: generate_pr_title - Generate PR title
+            new
+            {
+                name = "generate_pr_title",
+                description = "Analyzes the diff and generates a concise, conventional PR title. "
+                    + "Returns a suggested title following conventional commit format.",
+                inputSchema = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        baseBranch = new
+                        {
+                            type = "string",
+                            description = "The base branch name (e.g., 'main'). Auto-detected if not provided.",
+                        },
+                        style = new
+                        {
+                            type = "string",
+                            description = "Title style: 'conventional' (feat/fix/chore), 'descriptive', or 'ticket' (includes branch ticket number). Default: 'conventional'.",
+                        },
+                    },
+                    required = Array.Empty<string>(),
+                },
+            },
+            // Tool 4: generate_pr_description - Generate full PR description
+            new
+            {
+                name = "generate_pr_description",
+                description = "Analyzes the diff and generates a complete PR description including summary, "
+                    + "list of changes, testing notes, and checklist. Ready to paste into PR.",
+                inputSchema = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        baseBranch = new
+                        {
+                            type = "string",
+                            description = "The base branch name (e.g., 'main'). Auto-detected if not provided.",
+                        },
+                        includeChecklist = new
+                        {
+                            type = "boolean",
+                            description = "Include a PR checklist (default: true).",
+                        },
+                        ticketUrl = new
+                        {
+                            type = "string",
+                            description = "Optional ticket/issue URL to include in the description.",
                         },
                     },
                     required = Array.Empty<string>(),
@@ -158,10 +219,10 @@ internal static class McpHandlers
         // Dispatch to the appropriate tool
         ToolResult toolResult = toolCall.Name switch
         {
-            "generate_pr_patch" => await GitPatchTools.GeneratePrPatchAsync(toolCall.Arguments),
-            "generate_pr_patch_auto" => await GitPatchTools.GeneratePrPatchAutoAsync(
-                toolCall.Arguments
-            ),
+            "get_pr_diff" => await PrReviewTools.GetPrDiffAsync(toolCall.Arguments),
+            "review_pr_changes" => await PrReviewTools.ReviewPrChangesAsync(toolCall.Arguments),
+            "generate_pr_title" => await PrReviewTools.GeneratePrTitleAsync(toolCall.Arguments),
+            "generate_pr_description" => await PrReviewTools.GeneratePrDescriptionAsync(toolCall.Arguments),
             _ => null!,
         };
 

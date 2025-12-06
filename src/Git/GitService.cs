@@ -4,6 +4,12 @@
 // Centralized git operations for the MCP server.
 // All git commands are executed via this service to ensure consistent handling.
 // Validation helpers prevent shell injection by restricting allowed characters.
+// 
+// Base branch detection strategy (in order of reliability):
+// 1. Reflog - "Created from X" entry (most reliable)
+// 2. Git config - upstream tracking branch
+// 3. Merge-base analysis - unique common ancestor with local/remote branches
+// 4. If uncertain, return null and ask the user
 // ============================================================================
 
 using System.Diagnostics;
@@ -80,9 +86,13 @@ internal static partial class GitService
     }
 
     /// <summary>
-    /// Finds the base branch that the current branch was likely created from.
-    /// This is done by finding which common base branch (main, master, develop) 
-    /// has the most recent common ancestor with the current branch.
+    /// Finds the base branch that the current branch was created from.
+    /// Uses multiple detection strategies in order of reliability:
+    /// 1. Reflog - "Created from X" entry
+    /// 2. Git config - upstream tracking branch  
+    /// 3. Merge-base analysis - unique common ancestor
+    /// 
+    /// Does NOT guess or use hardcoded branch names. Returns null if uncertain.
     /// </summary>
     /// <param name="workingDirectory">The repository directory.</param>
     /// <param name="currentBranch">The current branch name.</param>
@@ -94,81 +104,326 @@ internal static partial class GitService
         string remote = "origin"
     )
     {
-        // Common base branch names to check, in order of preference
-        var candidateBranches = new[] { "main", "master", "develop", "development", "dev" };
+        if (string.IsNullOrWhiteSpace(workingDirectory) || string.IsNullOrWhiteSpace(currentBranch))
+            return null;
 
-        // First, try to get the default branch from the remote
-        var defaultBranch = await GetDefaultBranchAsync(workingDirectory, remote);
-        
-        // Put default branch first if it's not already in the list
-        var branchesToCheck = new List<string>();
-        if (!string.IsNullOrEmpty(defaultBranch) && !candidateBranches.Contains(defaultBranch))
+        // 1️⃣ REFLOG - Branch creation record (most reliable)
+        var reflogBase = await FindFromReflogAsync(workingDirectory, currentBranch);
+        if (reflogBase != null)
         {
-            branchesToCheck.Add(defaultBranch);
+            var branchRemote = await FindRemoteForBranchAsync(workingDirectory, reflogBase) ?? remote;
+            return (branchRemote, reflogBase);
         }
-        branchesToCheck.AddRange(candidateBranches);
 
-        string? bestBaseBranch = null;
-        int bestAheadCount = int.MaxValue;
-
-        foreach (var candidate in branchesToCheck)
+        // 2️⃣ GIT CONFIG - Upstream tracking configuration
+        var trackingBase = await FindFromTrackingConfigAsync(workingDirectory, currentBranch);
+        if (trackingBase != null && trackingBase != currentBranch)
         {
-            // Skip if candidate is the same as current branch
-            if (candidate == currentBranch)
-                continue;
+            var branchRemote = await GetBranchRemoteAsync(workingDirectory, currentBranch) ?? remote;
+            return (branchRemote, trackingBase);
+        }
 
-            var remoteBranch = $"{remote}/{candidate}";
+        // 3️⃣ MERGE-BASE - Unique common ancestor with local/remote branches
+        var mergeBaseResult = await FindFromUniqueMergeBaseAsync(workingDirectory, currentBranch, remote);
+        if (mergeBaseResult != null)
+        {
+            return mergeBaseResult;
+        }
 
-            // Check if this remote branch exists
-            var checkResult = await RunGitCommandAsync(
-                $"rev-parse --verify {remoteBranch}",
-                workingDirectory
-            );
-            if (checkResult.ExitCode != 0)
-                continue; // Branch doesn't exist, skip
+        // No definitive evidence found - return null (caller should ask user)
+        return null;
+    }
 
-            // Find merge-base between current branch and candidate
-            var mergeBaseResult = await RunGitCommandAsync(
-                $"merge-base {remoteBranch} HEAD",
-                workingDirectory
-            );
-            if (mergeBaseResult.ExitCode != 0 || string.IsNullOrWhiteSpace(mergeBaseResult.Output))
-                continue;
+    /// <summary>
+    /// Searches reflog for "Created from X" record.
+    /// This is the most reliable method as it shows the actual branch creation source.
+    /// </summary>
+    private static async Task<string?> FindFromReflogAsync(string workingDirectory, string currentBranch)
+    {
+        var result = await RunGitCommandAsync($"reflog show {currentBranch} --format=%gs", workingDirectory);
+        if (result.ExitCode != 0 || string.IsNullOrWhiteSpace(result.Output))
+            return null;
 
-            // Count how many commits ahead the candidate is from merge-base
-            // This helps identify which branch is the most likely parent
-            var countResult = await RunGitCommandAsync(
-                $"rev-list --count {mergeBaseResult.Output.Trim()}..{remoteBranch}",
-                workingDirectory
-            );
-            if (countResult.ExitCode != 0)
-                continue;
+        var lines = result.Output.Split('\n', StringSplitOptions.RemoveEmptyEntries);
 
-            if (int.TryParse(countResult.Output.Trim(), out int aheadCount))
+        // Start from oldest entry (branch creation moment)
+        foreach (var line in lines.Reverse())
+        {
+            // Pattern: "branch: Created from main" or "branch: Created from origin/develop"
+            var match = CreatedFromRegex().Match(line);
+            if (match.Success)
             {
-                // Prefer the branch with the smallest ahead count (closest common ancestor)
-                if (aheadCount < bestAheadCount)
+                var source = match.Groups[1].Value;
+
+                // Skip if HEAD or commit hash (not definitive)
+                if (source.Equals("HEAD", StringComparison.OrdinalIgnoreCase) || IsCommitHash(source))
+                    continue;
+
+                // "origin/main" -> "main"
+                return source.Contains('/') ? source.Split('/').Last() : source;
+            }
+
+            // Pattern: "checkout: moving from develop to feature/x" (first checkout)
+            match = CheckoutMovingRegex().Match(line);
+            if (match.Success)
+            {
+                var fromBranch = match.Groups[1].Value;
+                var toBranch = match.Groups[2].Value;
+
+                // Find where we came from when first switching to this branch
+                if (toBranch == currentBranch && !IsCommitHash(fromBranch))
                 {
-                    bestAheadCount = aheadCount;
-                    bestBaseBranch = candidate;
+                    return fromBranch.Contains('/') ? fromBranch.Split('/').Last() : fromBranch;
                 }
             }
         }
 
-        // If we found a good candidate, return it
-        if (!string.IsNullOrEmpty(bestBaseBranch))
+        return null;
+    }
+
+    /// <summary>
+    /// Reads upstream tracking branch from git config.
+    /// </summary>
+    private static async Task<string?> FindFromTrackingConfigAsync(string workingDirectory, string branch)
+    {
+        var result = await RunGitCommandAsync($"config --get branch.{branch}.merge", workingDirectory);
+        if (result.ExitCode != 0 || string.IsNullOrWhiteSpace(result.Output))
+            return null;
+
+        var trackingRef = result.Output.Trim();
+
+        // "refs/heads/main" -> "main"
+        if (trackingRef.StartsWith("refs/heads/"))
+            return trackingRef["refs/heads/".Length..];
+
+        return trackingRef;
+    }
+
+    /// <summary>
+    /// Merge-base analysis: Returns result only if there's a UNIQUE branch with common ancestor.
+    /// If multiple candidates exist with ambiguity, returns null (no guessing).
+    /// </summary>
+    private static async Task<(string Remote, string BaseBranch)?> FindFromUniqueMergeBaseAsync(
+        string workingDirectory,
+        string currentBranch,
+        string remote)
+    {
+        // Get all local and remote branches
+        var localBranches = await GetLocalBranchesAsync(workingDirectory, currentBranch);
+        var remoteBranches = await GetRemoteBranchesAsync(workingDirectory, remote);
+
+        // Get current branch HEAD
+        var currentHeadResult = await RunGitCommandAsync($"rev-parse {currentBranch}", workingDirectory);
+        if (currentHeadResult.ExitCode != 0)
+            return null;
+
+        var currentHead = currentHeadResult.Output.Trim();
+
+        string? uniqueBase = null;
+        string? uniqueRemote = null;
+        int candidateCount = 0;
+
+        // Check local branches
+        foreach (var branch in localBranches)
         {
-            return (remote, bestBaseBranch);
+            var mergeBase = await GetMergeBaseAsync(workingDirectory, currentBranch, branch);
+            if (mergeBase == null)
+                continue;
+
+            // Merge-base should not be same as current HEAD (means no commits yet, ambiguous)
+            if (mergeBase == currentHead)
+                continue;
+
+            // Is current branch ahead of this branch? (derived from it)
+            var isAhead = await IsBranchAheadAsync(workingDirectory, currentBranch, branch);
+            if (!isAhead)
+                continue;
+
+            candidateCount++;
+
+            if (candidateCount == 1)
+            {
+                uniqueBase = branch;
+                uniqueRemote = await FindRemoteForBranchAsync(workingDirectory, branch) ?? remote;
+            }
+            else
+            {
+                // Multiple candidates - check if one is parent of the other
+                var isNewCandidateChildOfPrevious = await IsBranchAheadAsync(workingDirectory, branch, uniqueBase!);
+                if (isNewCandidateChildOfPrevious)
+                {
+                    // New candidate is child of previous -> use new (more specific)
+                    uniqueBase = branch;
+                    uniqueRemote = await FindRemoteForBranchAsync(workingDirectory, branch) ?? remote;
+                    candidateCount = 1;
+                }
+                else
+                {
+                    var isPreviousChildOfNewCandidate = await IsBranchAheadAsync(workingDirectory, uniqueBase!, branch);
+                    if (isPreviousChildOfNewCandidate)
+                    {
+                        // Previous is more specific, keep it
+                        candidateCount = 1;
+                    }
+                    // Else: Both are independent, ambiguity remains
+                }
+            }
         }
 
-        // Fallback: use the default branch
-        if (!string.IsNullOrEmpty(defaultBranch) && defaultBranch != currentBranch)
+        // Check remote branches (if not already checked as local)
+        foreach (var branch in remoteBranches)
         {
-            return (remote, defaultBranch);
+            if (localBranches.Contains(branch))
+                continue;
+
+            var remoteRef = $"{remote}/{branch}";
+            var mergeBase = await GetMergeBaseAsync(workingDirectory, currentBranch, remoteRef);
+            if (mergeBase == null || mergeBase == currentHead)
+                continue;
+
+            var isAhead = await IsBranchAheadAsync(workingDirectory, currentBranch, remoteRef);
+            if (!isAhead)
+                continue;
+
+            candidateCount++;
+
+            if (candidateCount == 1)
+            {
+                uniqueBase = branch;
+                uniqueRemote = remote;
+            }
+            else
+            {
+                // Multiple candidates with remote - apply same parent/child logic
+                var remoteUniqueRef = $"{uniqueRemote}/{uniqueBase}";
+                var isNewCandidateChildOfPrevious = await IsBranchAheadAsync(workingDirectory, remoteRef, remoteUniqueRef);
+                if (isNewCandidateChildOfPrevious)
+                {
+                    uniqueBase = branch;
+                    uniqueRemote = remote;
+                    candidateCount = 1;
+                }
+                else
+                {
+                    var isPreviousChildOfNewCandidate = await IsBranchAheadAsync(workingDirectory, remoteUniqueRef, remoteRef);
+                    if (isPreviousChildOfNewCandidate)
+                    {
+                        candidateCount = 1;
+                    }
+                }
+            }
         }
 
-        // Last resort: use main
-        return (remote, "main");
+        // Only return if there's exactly one definitive candidate
+        if (candidateCount == 1 && uniqueBase != null)
+        {
+            return (uniqueRemote ?? remote, uniqueBase);
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Gets the merge-base (common ancestor) between two branches.
+    /// </summary>
+    private static async Task<string?> GetMergeBaseAsync(string workingDirectory, string branch1, string branch2)
+    {
+        var result = await RunGitCommandAsync($"merge-base {branch1} {branch2}", workingDirectory);
+        return result.ExitCode == 0 ? result.Output.Trim() : null;
+    }
+
+    /// <summary>
+    /// Checks if branch is ahead of baseBranch (has commits that baseBranch doesn't have).
+    /// </summary>
+    private static async Task<bool> IsBranchAheadAsync(string workingDirectory, string branch, string baseBranch)
+    {
+        var result = await RunGitCommandAsync($"rev-list --count {baseBranch}..{branch}", workingDirectory);
+        return result.ExitCode == 0 &&
+               int.TryParse(result.Output.Trim(), out int ahead) &&
+               ahead > 0;
+    }
+
+    /// <summary>
+    /// Gets all local branches except the specified one.
+    /// </summary>
+    private static async Task<string[]> GetLocalBranchesAsync(string workingDirectory, string excludeBranch)
+    {
+        var result = await RunGitCommandAsync("branch --list --format=%(refname:short)", workingDirectory);
+        if (result.ExitCode != 0)
+            return [];
+
+        return result.Output
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries)
+            .Select(b => b.Trim())
+            .Where(b => b != excludeBranch && !string.IsNullOrWhiteSpace(b))
+            .ToArray();
+    }
+
+    /// <summary>
+    /// Gets all remote branches for the specified remote.
+    /// </summary>
+    private static async Task<string[]> GetRemoteBranchesAsync(string workingDirectory, string remote)
+    {
+        var result = await RunGitCommandAsync($"branch -r --list \"{remote}/*\" --format=%(refname:short)", workingDirectory);
+        if (result.ExitCode != 0)
+            return [];
+
+        var prefix = $"{remote}/";
+        return result.Output
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries)
+            .Select(b => b.Trim())
+            .Where(b => !b.Contains("->")) // Skip HEAD pointer
+            .Select(b => b.StartsWith(prefix) ? b[prefix.Length..] : b)
+            .Where(b => !string.IsNullOrWhiteSpace(b))
+            .ToArray();
+    }
+
+    /// <summary>
+    /// Gets the configured remote for a branch from git config.
+    /// </summary>
+    private static async Task<string?> GetBranchRemoteAsync(string workingDirectory, string branch)
+    {
+        var result = await RunGitCommandAsync($"config --get branch.{branch}.remote", workingDirectory);
+        return result.ExitCode == 0 ? result.Output.Trim() : null;
+    }
+
+    /// <summary>
+    /// Finds which remote contains the specified branch.
+    /// </summary>
+    private static async Task<string?> FindRemoteForBranchAsync(string workingDirectory, string branch)
+    {
+        // First check config
+        var configRemote = await GetBranchRemoteAsync(workingDirectory, branch);
+        if (!string.IsNullOrWhiteSpace(configRemote))
+            return configRemote;
+
+        // Check which remotes have this branch
+        var remotesResult = await RunGitCommandAsync("remote", workingDirectory);
+        if (remotesResult.ExitCode != 0)
+            return null;
+
+        foreach (var remoteLine in remotesResult.Output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var remoteName = remoteLine.Trim();
+            var checkResult = await RunGitCommandAsync(
+                $"show-ref --verify --quiet refs/remotes/{remoteName}/{branch}",
+                workingDirectory);
+
+            if (checkResult.ExitCode == 0)
+                return remoteName;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Checks if a string looks like a git commit hash.
+    /// </summary>
+    private static bool IsCommitHash(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value) || value.Length < 7 || value.Length > 40)
+            return false;
+        return value.All(c => (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'));
     }
 
     /// <summary>
@@ -260,4 +515,10 @@ internal static partial class GitService
 
     [GeneratedRegex(@"^[a-zA-Z0-9/_.-]+$")]
     private static partial Regex FileNameRegex();
+
+    [GeneratedRegex(@"branch:\s*Created from\s+(\S+)", RegexOptions.IgnoreCase)]
+    private static partial Regex CreatedFromRegex();
+
+    [GeneratedRegex(@"checkout:\s*moving from\s+(\S+)\s+to\s+(\S+)", RegexOptions.IgnoreCase)]
+    private static partial Regex CheckoutMovingRegex();
 }
