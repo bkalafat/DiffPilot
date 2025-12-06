@@ -160,6 +160,24 @@ public class Program
                     required = new[] { "baseBranch", "featureBranch" },
                 },
             },
+            new
+            {
+                name = "generate_pr_patch_auto",
+                description = "Detects the base branch and current branch from git and generates a patch diffing baseBranch...featureBranch.",
+                inputSchema = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        patchFileName = new
+                        {
+                            type = "string",
+                            description = "Optional patch file name (default: 'pr-auto.patch').",
+                        },
+                    },
+                    required = new string[] { },
+                },
+            },
         };
 
         var result = new { tools };
@@ -198,6 +216,10 @@ public class Program
 
             case "generate_pr_patch":
                 await HandleGeneratePrPatchAsync(request.Id, toolCall.Arguments);
+                break;
+
+            case "generate_pr_patch_auto":
+                await HandleGeneratePrPatchAutoAsync(request.Id, toolCall.Arguments);
                 break;
 
             default:
@@ -356,6 +378,171 @@ public class Program
         var result = new
         {
             content = new[] { new { type = "text", text = resultText } },
+            isError = false,
+        };
+
+        WriteResult(id, result);
+    }
+
+    #endregion
+
+    #region Tool: call tools - auto
+
+    private static async Task HandleGeneratePrPatchAutoAsync(JsonElement? id, JsonElement? arguments)
+    {
+        var patchFileName = "pr-auto.patch";
+        if (
+            arguments.HasValue
+            && arguments.Value.TryGetProperty("patchFileName", out var patchFileElement)
+            && patchFileElement.ValueKind == JsonValueKind.String
+        )
+        {
+            var fileName = patchFileElement.GetString();
+            if (!string.IsNullOrWhiteSpace(fileName))
+            {
+                patchFileName = fileName;
+            }
+        }
+
+        var repoDir = Directory.GetCurrentDirectory();
+
+        // Step 1: Detect current branch
+        var currentBranchResult = await RunGitCommandAsync("rev-parse --abbrev-ref HEAD", repoDir);
+        if (currentBranchResult.ExitCode != 0 || string.IsNullOrWhiteSpace(currentBranchResult.Output))
+        {
+            WriteError(
+                id,
+                -32010,
+                "Failed to detect current branch",
+                currentBranchResult.Output
+            );
+            return;
+        }
+
+        var currentBranch = currentBranchResult.Output.Trim();
+
+        // Step 2: Detect upstream and base branch
+        var upstreamResult = await RunGitCommandAsync(
+            "rev-parse --abbrev-ref --symbolic-full-name @{upstream}",
+            repoDir
+        );
+
+        string remote = "origin";
+        string baseBranch = "main";
+
+        if (upstreamResult.ExitCode == 0 && !string.IsNullOrWhiteSpace(upstreamResult.Output))
+        {
+            var upstreamRef = upstreamResult.Output.Trim();
+            // Expected format: "origin/main" or similar
+            var parts = upstreamRef.Split('/', 2);
+            if (parts.Length == 2)
+            {
+                remote = parts[0];
+                baseBranch = parts[1];
+            }
+            else
+            {
+                // Fallback to default detection
+                var symbolicRefResult = await RunGitCommandAsync(
+                    "symbolic-ref refs/remotes/origin/HEAD",
+                    repoDir
+                );
+
+                if (
+                    symbolicRefResult.ExitCode == 0
+                    && !string.IsNullOrWhiteSpace(symbolicRefResult.Output)
+                )
+                {
+                    // Expected format: "refs/remotes/origin/main"
+                    var refParts = symbolicRefResult.Output.Trim().Split('/');
+                    if (refParts.Length > 0)
+                    {
+                        baseBranch = refParts[^1]; // Last element
+                    }
+                }
+            }
+        }
+        else
+        {
+            // Fallback: try symbolic-ref
+            var symbolicRefResult = await RunGitCommandAsync(
+                "symbolic-ref refs/remotes/origin/HEAD",
+                repoDir
+            );
+
+            if (
+                symbolicRefResult.ExitCode == 0
+                && !string.IsNullOrWhiteSpace(symbolicRefResult.Output)
+            )
+            {
+                // Expected format: "refs/remotes/origin/main"
+                var refParts = symbolicRefResult.Output.Trim().Split('/');
+                if (refParts.Length > 0)
+                {
+                    baseBranch = refParts[^1]; // Last element
+                }
+            }
+        }
+
+        // Step 3: Validate auto-detected values
+        if (
+            !IsValidBranchName(currentBranch)
+            || !IsValidBranchName(baseBranch)
+            || !IsValidBranchName(remote)
+            || !IsValidFileName(patchFileName)
+        )
+        {
+            WriteError(
+                id,
+                -32602,
+                "Invalid params",
+                "Auto-detected branch or file name contains invalid characters."
+            );
+            return;
+        }
+
+        // Step 4: Run git fetch
+        var fetchResult = await RunGitCommandAsync($"fetch {remote}", repoDir);
+        if (fetchResult.ExitCode != 0)
+        {
+            WriteError(id, -32011, "git fetch failed", fetchResult.Output);
+            return;
+        }
+
+        // Step 5: Run git diff (comparing remote base to current local branch)
+        var diffArgs = $"diff {remote}/{baseBranch}...{currentBranch}";
+        var diffResult = await RunGitCommandAsync(diffArgs, repoDir);
+        if (diffResult.ExitCode != 0)
+        {
+            WriteError(id, -32012, "git diff failed", diffResult.Output);
+            return;
+        }
+
+        // Step 6: Write patch file
+        var patchPath = Path.Combine(repoDir, patchFileName);
+        try
+        {
+            await File.WriteAllTextAsync(patchPath, diffResult.Output);
+        }
+        catch (Exception ex)
+        {
+            WriteError(id, -32013, "Failed to write patch file", ex.Message);
+            return;
+        }
+
+        // Step 7: Return success with patch content
+        var statusText =
+            $"Auto-detected base branch {remote}/{baseBranch} and current branch {currentBranch}. "
+            + $"Created patch file {patchFileName} comparing {remote}/{baseBranch}...{currentBranch}. "
+            + "Below is the patch content; please review it.";
+
+        var result = new
+        {
+            content = new[]
+            {
+                new { type = "text", text = statusText },
+                new { type = "text", text = diffResult.Output },
+            },
             isError = false,
         };
 
