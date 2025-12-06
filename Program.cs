@@ -59,8 +59,19 @@ public class Program
 
     private static async Task HandleRequestAsync(JsonRcpRequest request)
     {
+        // Notifications have no id → do not respond (e.g. notifications/initialized)
+        if (!request.Id.HasValue)
+        {
+            // You could log here if you want, but don't write a JSON-RPC response.
+            return;
+        }
+
         switch (request.Method)
         {
+            case "initialize":
+                await HandleInitializeAsync(request);
+                break;
+
             case "tools/list":
                 await HandleListTools(request);
                 break;
@@ -70,9 +81,30 @@ public class Program
                 break;
 
             default:
-                WriteError(request.Id, -32601, "Method not found:" + request.Method);
+                WriteError(request.Id, -32601, "Method not found: " + request.Method);
                 break;
         }
+    }
+
+    private static Task HandleInitializeAsync(JsonRcpRequest request)
+    {
+        var result = new
+        {
+            protocolVersion = "2024-11-05",
+            capabilities = new
+            {
+                tools = new
+                {
+                    // we don't send tools/listChanged notifications
+                    listChanged = false,
+                },
+            },
+            serverInfo = new { name = "AzDoErrorMcpServer", version = "0.1.0" },
+            instructions = "Simple manually implemented MCP echo server.",
+        };
+
+        WriteResult(request.Id, result);
+        return Task.CompletedTask;
     }
 
     #region Tool: list tools
@@ -136,7 +168,7 @@ public class Program
         }
     }
 
-    private static Task HandleEchoToolAsync(string? id, JsonElement? arguments)
+    private static Task HandleEchoToolAsync(JsonElement? id, JsonElement? arguments)
     {
         if (arguments == null)
         {
@@ -155,7 +187,7 @@ public class Program
 
         var text = textElement.GetString() ?? string.Empty;
 
-        var result = new { text };
+        var result = new { content = new[] { new { type = "text", text } }, isError = false };
 
         WriteResult(id, result);
         return Task.CompletedTask;
@@ -165,7 +197,7 @@ public class Program
 
     #region Helpers
 
-    private static void WriteResult(string? id, object result)
+    private static void WriteResult(JsonElement? id, object result)
     {
         var response = new JsonRcpResponse<object>
         {
@@ -178,7 +210,7 @@ public class Program
         Console.Out.Flush();
     }
 
-    private static void WriteError(string? id, int code, string message, string? data = null)
+    private static void WriteError(JsonElement? id, int code, string message, string? data = null)
     {
         var error = new JsonRcpError
         {
@@ -201,20 +233,27 @@ public class Program
 
     private class JsonRcpRequest
     {
+        [JsonPropertyName("jsonrpc")]
+        public string? Jsonrpc { get; set; }
+
         [JsonPropertyName("method")]
         public string? Method { get; set; }
 
         [JsonPropertyName("params")]
         public JsonElement? Params { get; set; }
 
+        // id can be string or number, so use JsonElement?
         [JsonPropertyName("id")]
-        public string? Id { get; set; }
+        public JsonElement? Id { get; set; }
     }
 
     private class JsonRcpResponse<TResult>
     {
+        [JsonPropertyName("jsonrpc")]
+        public string Jsonrpc { get; set; } = "2.0";
+
         [JsonPropertyName("id")]
-        public string? Id { get; set; }
+        public JsonElement? Id { get; set; }
 
         [JsonPropertyName("result")]
         public TResult? Result { get; set; }
