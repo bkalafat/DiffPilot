@@ -1,0 +1,40 @@
+<Project>
+  <!-- ============================================================================
+       Directory.Build.props - DiffPilot
+       ============================================================================
+       Shared build properties for all projects in the solution.
+       This file is automatically imported by all .csproj files in subdirectories.
+       ============================================================================ -->
+  <PropertyGroup>
+    <!-- Target Framework -->
+    <TargetFramework>net9.0</TargetFramework>
+    <LangVersion>13</LangVersion>
+    <!-- Core Settings -->
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <!-- Code Quality -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsAsErrors />
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <!-- Deterministic Builds -->
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+    <!-- Package Metadata -->
+    <Authors>Burak Kalafat</Authors>
+    <Company>DiffPilot</Company>
+    <Copyright>Copyright © 2024 Burak Kalafat</Copyright>
+    <RepositoryUrl>https://github.com/bkalafat/DiffPilot</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/bkalafat/DiffPilot</PackageProjectUrl>
+  </PropertyGroup>
+  <!-- Source Link for debugging -->
+  <PropertyGroup>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+  </PropertyGroup>
+</Project>

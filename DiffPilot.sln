@@ -2,10 +2,31 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.2.0
 MinimumVisualStudioVersion = 10.0.40219.1
+
+# ============================================================================
+# Solution Folders
+# ============================================================================
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{B1C2D3E4-F5A6-4789-0ABC-DEF123456789}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{C2D3E4F5-A6B7-4890-1BCD-EF2345678901}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{D3E4F5A6-B7C8-4901-2CDE-F34567890123}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+		.gitignore = .gitignore
+		Directory.Build.props = Directory.Build.props
+		README.md = README.md
+	EndProjectSection
+EndProject
+
+# ============================================================================
+# Projects
+# ============================================================================
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DiffPilot", "DiffPilot.csproj", "{DCA36382-7F93-F303-371F-F76BAA60183C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DiffPilot.Tests", "tests\DiffPilot.Tests.csproj", "{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}"
 EndProject
+
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -23,6 +44,10 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{DCA36382-7F93-F303-371F-F76BAA60183C} = {B1C2D3E4-F5A6-4789-0ABC-DEF123456789}
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890} = {C2D3E4F5-A6B7-4890-1BCD-EF2345678901}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D9BC57C5-73ED-4936-B4CC-3D393471154C}

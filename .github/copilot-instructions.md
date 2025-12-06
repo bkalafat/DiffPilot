@@ -4,23 +4,47 @@
 DiffPilot is an MCP (Model Context Protocol) server that provides PR code review and developer productivity tools via JSON-RPC 2.0 over stdio.
 
 ## Tech Stack
-- **Language**: C# (.NET 9)
+- **Language**: C# 13 (.NET 9)
 - **Protocol**: MCP stdio transport (JSON-RPC 2.0)
-- **No external dependencies** - uses only .NET BCL
+- **Testing**: xUnit 2.9.2
+- **No external runtime dependencies** - uses only .NET BCL
 
 ## Project Structure
 ```
-src/
-├── Program.cs              # Entry point - stdin/stdout JSON-RPC loop
-├── Protocol/
-│   ├── JsonRpcModels.cs    # Request/Response/Error models
-│   └── McpHandlers.cs      # MCP method handlers (initialize, tools/list, tools/call)
-├── Git/
-│   └── GitService.cs       # Git command execution, branch detection, validation
-└── Tools/
-    ├── ToolResult.cs       # Tool response wrapper
-    ├── PrReviewTools.cs    # PR review tool implementations
-    └── DeveloperTools.cs   # Developer productivity tools
+DiffPilot/
+├── .editorconfig               # Code style configuration
+├── .gitignore
+├── Directory.Build.props       # Shared build properties (all projects)
+├── DiffPilot.sln               # Solution file with folder organization
+├── DiffPilot.csproj            # Main project file
+├── README.md
+│
+├── .github/
+│   ├── copilot-instructions.md # This file
+│   └── instructions/
+│       └── dotnet9-best-practices.md  # .NET 9 coding standards
+│
+├── src/                        # Source code
+│   ├── Program.cs              # Entry point - stdin/stdout JSON-RPC loop
+│   ├── Git/
+│   │   └── GitService.cs       # Git command execution, branch detection
+│   ├── Protocol/
+│   │   ├── JsonRpcModels.cs    # JSON-RPC 2.0 request/response models
+│   │   └── McpHandlers.cs      # MCP method handlers
+│   └── Tools/
+│       ├── ToolResult.cs       # Tool response wrapper
+│       ├── PrReviewTools.cs    # PR review tools (get_pr_diff, etc.)
+│       └── DeveloperTools.cs   # Developer tools (scan_secrets, etc.)
+│
+└── tests/                      # Unit tests
+    ├── DiffPilot.Tests.csproj
+    ├── SecretScanningTests.cs
+    ├── ChangelogGenerationTests.cs
+    ├── DiffStatsParsingTests.cs
+    ├── TestSuggestionAnalysisTests.cs
+    ├── CommitTypeDetectionTests.cs
+    ├── PrGenerationTests.cs
+    └── GitValidationTests.cs
 ```
 
 ## Available MCP Tools
@@ -45,8 +69,22 @@ src/
 - Git commands run via `GitService.RunGitCommandAsync()`
 - Tools return `ToolResult.Success()` or `ToolResult.Error()`
 
-## Build & Run
+## Build & Test
 ```bash
+# Build
 dotnet build
+
+# Run tests (213 unit tests)
+dotnet test
+
+# Run the MCP server
 dotnet run
 ```
+
+## Best Practices
+See `.github/instructions/dotnet9-best-practices.md` for:
+- C# 13 features (primary constructors, collection expressions)
+- Async/await patterns
+- Performance optimizations
+- Exception handling
+- Unit testing conventions
