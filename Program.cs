@@ -1,4 +1,5 @@
-﻿using System.Reflection.Metadata;
+﻿using System.Diagnostics;
+using System.Reflection.Metadata;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -111,7 +112,7 @@ public class Program
 
     private static async Task HandleListTools(JsonRcpRequest request)
     {
-        var tools = new[]
+        var tools = new object[]
         {
             new
             {
@@ -125,6 +126,23 @@ public class Program
                         text = new { type = "string", description = "The text to echo." },
                     },
                     required = new[] { "text" },
+                },
+            },
+            new
+            {
+                name = "generate_pr_patch",
+                description = "Fetches latest from git and generates a patch file diffing baseBranch...featureBranch.",
+                InputSchema = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        baseBranch = new { type = "string", description = "The base branch name (e.g., 'main')." },
+                        featureBranch = new { type = "string", description = "The feature branch name (e.g., 'feature/acqverse/tmbb')." },
+                        patchFileName = new { type = "string", description = "Optional patch file name (default: 'pr.patch')." },
+                        remote = new { type = "string", description = "Optional git remote (default: 'origin')." },
+                    },
+                    required = new[] { "baseBranch", "featureBranch" },
                 },
             },
         };
@@ -162,6 +180,10 @@ public class Program
                 await HandleEchoToolAsync(request.Id, toolCall.Arguments);
                 break;
 
+            case "generate_pr_patch":
+                await HandleGeneratePrPatchAsync(request.Id, toolCall.Arguments);
+                break;
+
             default:
                 WriteError(request.Id, -32601, "Tool not found: " + toolCall.Name);
                 break;
@@ -193,9 +215,157 @@ public class Program
         return Task.CompletedTask;
     }
 
+    private static async Task HandleGeneratePrPatchAsync(JsonElement? id, JsonElement? arguments)
+    {
+        if (arguments == null)
+        {
+            WriteError(id, -32602, "Invalid params", "Missing arguments for generate_pr_patch tool.");
+            return;
+        }
+
+        // Extract and validate parameters
+        if (
+            !arguments.Value.TryGetProperty("baseBranch", out var baseBranchElement)
+            || baseBranchElement.ValueKind != JsonValueKind.String
+        )
+        {
+            WriteError(id, -32602, "Invalid params", "Expected 'baseBranch' string in arguments.");
+            return;
+        }
+
+        if (
+            !arguments.Value.TryGetProperty("featureBranch", out var featureBranchElement)
+            || featureBranchElement.ValueKind != JsonValueKind.String
+        )
+        {
+            WriteError(id, -32602, "Invalid params", "Expected 'featureBranch' string in arguments.");
+            return;
+        }
+
+        var baseBranch = baseBranchElement.GetString() ?? string.Empty;
+        var featureBranch = featureBranchElement.GetString() ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(baseBranch) || string.IsNullOrWhiteSpace(featureBranch))
+        {
+            WriteError(id, -32602, "Invalid params", "baseBranch and featureBranch must be non-empty strings.");
+            return;
+        }
+
+        var remote = "origin";
+        if (arguments.Value.TryGetProperty("remote", out var remoteElement) && remoteElement.ValueKind == JsonValueKind.String)
+        {
+            remote = remoteElement.GetString() ?? "origin";
+        }
+
+        var patchFileName = "pr.patch";
+        if (arguments.Value.TryGetProperty("patchFileName", out var patchFileElement) && patchFileElement.ValueKind == JsonValueKind.String)
+        {
+            patchFileName = patchFileElement.GetString() ?? "pr.patch";
+        }
+
+        // Basic safety: only allow branch names containing [a-zA-Z0-9/_-]
+        if (!IsValidBranchName(baseBranch) || !IsValidBranchName(featureBranch) || !IsValidBranchName(remote) || !IsValidFileName(patchFileName))
+        {
+            WriteError(id, -32602, "Invalid params", "Branch names and patch file name contain invalid characters.");
+            return;
+        }
+
+        var repoDir = Directory.GetCurrentDirectory();
+
+        // Run git fetch
+        var fetchResult = await RunGitCommandAsync($"fetch {remote}", repoDir);
+        if (fetchResult.ExitCode != 0)
+        {
+            WriteError(id, -32001, "git fetch failed", fetchResult.Output);
+            return;
+        }
+
+        // Run git diff
+        var diffResult = await RunGitCommandAsync($"diff {remote}/{baseBranch}...{remote}/{featureBranch}", repoDir);
+        if (diffResult.ExitCode != 0)
+        {
+            WriteError(id, -32002, "git diff failed", diffResult.Output);
+            return;
+        }
+
+        // Write patch file
+        var patchPath = Path.Combine(repoDir, patchFileName);
+        try
+        {
+            await File.WriteAllTextAsync(patchPath, diffResult.Output);
+        }
+        catch (Exception ex)
+        {
+            WriteError(id, -32003, "Failed to write patch file", ex.Message);
+            return;
+        }
+
+        // Return success
+        var resultText = $"Created patch file {patchFileName} comparing {remote}/{baseBranch}...{remote}/{featureBranch}. Please review this patch file using Copilot.";
+        var result = new
+        {
+            content = new[]
+            {
+                new
+                {
+                    type = "text",
+                    text = resultText
+                }
+            },
+            isError = false
+        };
+
+        WriteResult(id, result);
+    }
+
     #endregion
 
     #region Helpers
+
+    private static bool IsValidBranchName(string name)
+    {
+        return System.Text.RegularExpressions.Regex.IsMatch(name, @"^[a-zA-Z0-9/_-]+$");
+    }
+
+    private static bool IsValidFileName(string name)
+    {
+        return System.Text.RegularExpressions.Regex.IsMatch(name, @"^[a-zA-Z0-9/_.-]+$") && !name.Contains("..");
+    }
+
+    private static async Task<(int ExitCode, string Output)> RunGitCommandAsync(string arguments, string workingDirectory)
+    {
+        var psi = new ProcessStartInfo
+        {
+            FileName = "git",
+            Arguments = arguments,
+            WorkingDirectory = workingDirectory,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+        };
+
+        var process = new Process { StartInfo = psi };
+
+        var sb = new StringBuilder();
+
+        process.OutputDataReceived += (_, e) =>
+        {
+            if (e.Data != null) sb.AppendLine(e.Data);
+        };
+
+        process.ErrorDataReceived += (_, e) =>
+        {
+            if (e.Data != null) sb.AppendLine(e.Data);
+        };
+
+        process.Start();
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
+        await process.WaitForExitAsync();
+
+        return (process.ExitCode, sb.ToString());
+    }
 
     private static void WriteResult(JsonElement? id, object result)
     {
