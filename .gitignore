@@ -1,0 +1,59 @@
+# Build results
+bin/
+obj/
+*.o
+*.a
+*.so
+*.so.*
+*.dylib
+
+# Visual Studio cache/options directory
+.vs/
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Build folder
+.vs/
+bin/
+obj/
+
+# NuGet Packages
+*.nupkg
+*.snupkg
+*.nuget.props
+*.nuget.targets
+
+# Local History for Visual Studio
+.localhistory/
+
+# Visual Studio cache directory
+.vs/
+
+# Rider
+.idea/
+*.sln.iml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# Runtime configuration files
+*.runtimeconfig.json
+*.runtimeconfig.dev.json
+
+# Dependencies
+node_modules/
