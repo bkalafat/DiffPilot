@@ -80,8 +80,102 @@ internal static partial class GitService
     }
 
     /// <summary>
+    /// Finds the base branch that the current branch was likely created from.
+    /// This is done by finding which common base branch (main, master, develop) 
+    /// has the most recent common ancestor with the current branch.
+    /// </summary>
+    /// <param name="workingDirectory">The repository directory.</param>
+    /// <param name="currentBranch">The current branch name.</param>
+    /// <param name="remote">The remote name (default: origin).</param>
+    /// <returns>A tuple of (remote, baseBranch) or null if detection fails.</returns>
+    public static async Task<(string Remote, string BaseBranch)?> FindBaseBranchAsync(
+        string workingDirectory,
+        string currentBranch,
+        string remote = "origin"
+    )
+    {
+        // Common base branch names to check, in order of preference
+        var candidateBranches = new[] { "main", "master", "develop", "development", "dev" };
+
+        // First, try to get the default branch from the remote
+        var defaultBranch = await GetDefaultBranchAsync(workingDirectory, remote);
+        
+        // Put default branch first if it's not already in the list
+        var branchesToCheck = new List<string>();
+        if (!string.IsNullOrEmpty(defaultBranch) && !candidateBranches.Contains(defaultBranch))
+        {
+            branchesToCheck.Add(defaultBranch);
+        }
+        branchesToCheck.AddRange(candidateBranches);
+
+        string? bestBaseBranch = null;
+        int bestAheadCount = int.MaxValue;
+
+        foreach (var candidate in branchesToCheck)
+        {
+            // Skip if candidate is the same as current branch
+            if (candidate == currentBranch)
+                continue;
+
+            var remoteBranch = $"{remote}/{candidate}";
+
+            // Check if this remote branch exists
+            var checkResult = await RunGitCommandAsync(
+                $"rev-parse --verify {remoteBranch}",
+                workingDirectory
+            );
+            if (checkResult.ExitCode != 0)
+                continue; // Branch doesn't exist, skip
+
+            // Find merge-base between current branch and candidate
+            var mergeBaseResult = await RunGitCommandAsync(
+                $"merge-base {remoteBranch} HEAD",
+                workingDirectory
+            );
+            if (mergeBaseResult.ExitCode != 0 || string.IsNullOrWhiteSpace(mergeBaseResult.Output))
+                continue;
+
+            // Count how many commits ahead the candidate is from merge-base
+            // This helps identify which branch is the most likely parent
+            var countResult = await RunGitCommandAsync(
+                $"rev-list --count {mergeBaseResult.Output.Trim()}..{remoteBranch}",
+                workingDirectory
+            );
+            if (countResult.ExitCode != 0)
+                continue;
+
+            if (int.TryParse(countResult.Output.Trim(), out int aheadCount))
+            {
+                // Prefer the branch with the smallest ahead count (closest common ancestor)
+                if (aheadCount < bestAheadCount)
+                {
+                    bestAheadCount = aheadCount;
+                    bestBaseBranch = candidate;
+                }
+            }
+        }
+
+        // If we found a good candidate, return it
+        if (!string.IsNullOrEmpty(bestBaseBranch))
+        {
+            return (remote, bestBaseBranch);
+        }
+
+        // Fallback: use the default branch
+        if (!string.IsNullOrEmpty(defaultBranch) && defaultBranch != currentBranch)
+        {
+            return (remote, defaultBranch);
+        }
+
+        // Last resort: use main
+        return (remote, "main");
+    }
+
+    /// <summary>
     /// Gets the upstream branch reference (e.g., "origin/main") for the current branch.
     /// Returns null if no upstream is configured.
+    /// Note: This returns the tracking branch, which may be the same branch on remote,
+    /// not necessarily the base branch that this branch was created from.
     /// </summary>
     public static async Task<(string Remote, string Branch)?> GetUpstreamBranchAsync(
         string workingDirectory

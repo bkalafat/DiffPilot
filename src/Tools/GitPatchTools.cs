@@ -169,19 +169,28 @@ internal static class GitPatchTools
             );
         }
 
-        // Step 2: Detect upstream and base branch
+        // Step 2: Find the base branch (the branch this feature was created from)
+        // This looks for common base branches (main, master, develop) and finds
+        // which one has the closest merge-base with the current branch.
         string remote = "origin";
         string baseBranch;
 
-        var upstream = await GitService.GetUpstreamBranchAsync(repoDir);
-        if (upstream.HasValue)
+        // First, fetch to ensure we have latest refs
+        var prefetchResult = await GitService.RunGitCommandAsync($"fetch {remote}", repoDir);
+        if (prefetchResult.ExitCode != 0)
         {
-            remote = upstream.Value.Remote;
-            baseBranch = upstream.Value.Branch;
+            return ToolResult.GitError("git fetch failed", prefetchResult.Output);
+        }
+
+        var baseInfo = await GitService.FindBaseBranchAsync(repoDir, currentBranch, remote);
+        if (baseInfo.HasValue)
+        {
+            remote = baseInfo.Value.Remote;
+            baseBranch = baseInfo.Value.BaseBranch;
         }
         else
         {
-            // Fallback: try to get the default branch for origin
+            // Fallback: use the default branch
             baseBranch = await GitService.GetDefaultBranchAsync(repoDir, remote);
         }
 
@@ -197,14 +206,7 @@ internal static class GitPatchTools
             );
         }
 
-        // Step 3: Run git fetch
-        var fetchResult = await GitService.RunGitCommandAsync($"fetch {remote}", repoDir);
-        if (fetchResult.ExitCode != 0)
-        {
-            return ToolResult.GitError("git fetch failed", fetchResult.Output);
-        }
-
-        // Step 4: Generate diff (comparing remote base to current local branch)
+        // Step 3: Generate diff (comparing remote base to current local branch)
         var diffArgs = $"diff {remote}/{baseBranch}...{currentBranch}";
         var diffResult = await GitService.RunGitCommandAsync(diffArgs, repoDir);
         if (diffResult.ExitCode != 0)
