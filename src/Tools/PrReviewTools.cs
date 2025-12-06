@@ -14,9 +14,9 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using AzDoErrorMcpServer.Git;
+using DiffPilot.Git;
 
-namespace AzDoErrorMcpServer.Tools;
+namespace DiffPilot.Tools;
 
 /// <summary>
 /// Contains the implementation of PR review tools.

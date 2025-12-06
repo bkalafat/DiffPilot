@@ -7,9 +7,9 @@
 // ============================================================================
 
 using System.Text.Json;
-using AzDoErrorMcpServer.Tools;
+using DiffPilot.Tools;
 
-namespace AzDoErrorMcpServer.Protocol;
+namespace DiffPilot.Protocol;
 
 /// <summary>
 /// Handles MCP protocol methods.
@@ -19,7 +19,7 @@ internal static class McpHandlers
     /// <summary>
     /// Server name used in serverInfo.
     /// </summary>
-    private const string ServerName = "PRReviewMcpServer";
+    private const string ServerName = "DiffPilot";
 
     /// <summary>
     /// Server version used in serverInfo.

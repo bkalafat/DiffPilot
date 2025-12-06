@@ -1,5 +1,5 @@
 // ============================================================================
-// Program.cs - AzDoErrorMcpServer
+// Program.cs - DiffPilot
 // ============================================================================
 // Entry point for the MCP stdio server.
 // This server reads JSON-RPC 2.0 requests from stdin and writes responses to stdout.
@@ -13,7 +13,7 @@
 
 using System.Text;
 using System.Text.Json;
-using AzDoErrorMcpServer.Protocol;
+using DiffPilot.Protocol;
 
 // Configure console for UTF-8
 Console.OutputEncoding = Encoding.UTF8;

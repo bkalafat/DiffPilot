@@ -5,7 +5,7 @@
 // Contains content items and an error flag.
 // ============================================================================
 
-namespace AzDoErrorMcpServer.Tools;
+namespace DiffPilot.Tools;
 
 /// <summary>
 /// Represents the result of a tool execution.

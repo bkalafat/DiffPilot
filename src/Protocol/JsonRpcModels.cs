@@ -9,7 +9,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace AzDoErrorMcpServer.Protocol;
+namespace DiffPilot.Protocol;
 
 /// <summary>
 /// Represents an incoming JSON-RPC 2.0 request or notification.

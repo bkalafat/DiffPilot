@@ -16,7 +16,7 @@ using System.Diagnostics;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace AzDoErrorMcpServer.Git;
+namespace DiffPilot.Git;
 
 /// <summary>
 /// Provides git operations and validation utilities.
