@@ -49,11 +49,16 @@ internal static class McpHandlers
                 },
             },
             serverInfo = new { name = ServerName, version = ServerVersion },
-            instructions = "This MCP server provides PR code review tools. Available tools:\n"
+            instructions = "This MCP server provides PR code review and developer productivity tools. Available tools:\n"
                 + "- get_pr_diff: Get the raw diff between branches for any purpose\n"
                 + "- review_pr_changes: Get diff with instructions for AI code review\n"
                 + "- generate_pr_title: Generate a conventional PR title from changes\n"
-                + "- generate_pr_description: Generate a complete PR description with summary, changes, and testing notes",
+                + "- generate_pr_description: Generate a complete PR description with summary, changes, and testing notes\n"
+                + "- generate_commit_message: Generate commit message from staged/unstaged changes\n"
+                + "- scan_secrets: Detect accidentally committed secrets, API keys, passwords\n"
+                + "- diff_stats: Get detailed statistics about changes\n"
+                + "- suggest_tests: Analyze changes and suggest test cases\n"
+                + "- generate_changelog: Generate changelog entries from commits",
         };
 
     /// <summary>
@@ -174,6 +179,141 @@ internal static class McpHandlers
                     required = Array.Empty<string>(),
                 },
             },
+            // Tool 5: generate_commit_message - Generate commit message from changes
+            new
+            {
+                name = "generate_commit_message",
+                description = "Analyzes staged changes (or unstaged if nothing staged) and generates a commit message. "
+                    + "Provides diff context and suggests conventional commit format.",
+                inputSchema = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        style = new
+                        {
+                            type = "string",
+                            description = "Message style: 'conventional' (feat/fix/chore) or 'simple'. Default: 'conventional'.",
+                        },
+                        scope = new
+                        {
+                            type = "string",
+                            description = "Optional scope for conventional commits (e.g., 'api', 'ui', 'auth').",
+                        },
+                        includeBody = new
+                        {
+                            type = "boolean",
+                            description = "Include body section in suggestion (default: true).",
+                        },
+                    },
+                    required = Array.Empty<string>(),
+                },
+            },
+            // Tool 6: scan_secrets - Detect secrets in changes
+            new
+            {
+                name = "scan_secrets",
+                description = "Scans staged and unstaged changes for accidentally committed secrets, API keys, "
+                    + "passwords, tokens, and other sensitive data patterns.",
+                inputSchema = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        scanStaged = new
+                        {
+                            type = "boolean",
+                            description = "Scan staged changes (default: true).",
+                        },
+                        scanUnstaged = new
+                        {
+                            type = "boolean",
+                            description = "Scan unstaged changes (default: true).",
+                        },
+                    },
+                    required = Array.Empty<string>(),
+                },
+            },
+            // Tool 7: diff_stats - Get change statistics
+            new
+            {
+                name = "diff_stats",
+                description = "Gets detailed statistics about changes: lines added/removed, files changed, "
+                    + "breakdown by file type. Can analyze working directory or branch comparison.",
+                inputSchema = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        baseBranch = new
+                        {
+                            type = "string",
+                            description = "Base branch for comparison. If provided, compares branches instead of working directory.",
+                        },
+                        featureBranch = new
+                        {
+                            type = "string",
+                            description = "Feature branch for comparison. Defaults to current branch.",
+                        },
+                        includeWorkingDir = new
+                        {
+                            type = "boolean",
+                            description = "Include working directory stats (default: true).",
+                        },
+                    },
+                    required = Array.Empty<string>(),
+                },
+            },
+            // Tool 8: suggest_tests - Suggest test cases
+            new
+            {
+                name = "suggest_tests",
+                description = "Analyzes changed code and suggests appropriate test cases based on detected patterns "
+                    + "(async code, error handling, loops, database calls, etc.).",
+                inputSchema = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        baseBranch = new
+                        {
+                            type = "string",
+                            description = "Base branch for comparison. If not provided, analyzes working directory changes.",
+                        },
+                    },
+                    required = Array.Empty<string>(),
+                },
+            },
+            // Tool 9: generate_changelog - Generate changelog entries
+            new
+            {
+                name = "generate_changelog",
+                description = "Generates changelog entries from commits between branches. "
+                    + "Categorizes commits into Added, Changed, Fixed, etc. following Keep a Changelog format.",
+                inputSchema = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        baseBranch = new
+                        {
+                            type = "string",
+                            description = "Base branch to compare against (default: 'main').",
+                        },
+                        featureBranch = new
+                        {
+                            type = "string",
+                            description = "Feature branch with commits. Defaults to current branch.",
+                        },
+                        format = new
+                        {
+                            type = "string",
+                            description = "Output format: 'keepachangelog' (categorized) or 'simple' (flat list). Default: 'keepachangelog'.",
+                        },
+                    },
+                    required = Array.Empty<string>(),
+                },
+            },
         };
 
         return new { tools };
@@ -223,6 +363,11 @@ internal static class McpHandlers
             "review_pr_changes" => await PrReviewTools.ReviewPrChangesAsync(toolCall.Arguments),
             "generate_pr_title" => await PrReviewTools.GeneratePrTitleAsync(toolCall.Arguments),
             "generate_pr_description" => await PrReviewTools.GeneratePrDescriptionAsync(toolCall.Arguments),
+            "generate_commit_message" => await DeveloperTools.GenerateCommitMessageAsync(toolCall.Arguments),
+            "scan_secrets" => await DeveloperTools.ScanSecretsAsync(toolCall.Arguments),
+            "diff_stats" => await DeveloperTools.GetDiffStatsAsync(toolCall.Arguments),
+            "suggest_tests" => await DeveloperTools.SuggestTestsAsync(toolCall.Arguments),
+            "generate_changelog" => await DeveloperTools.GenerateChangelogAsync(toolCall.Arguments),
             _ => null!,
         };
 

@@ -47,6 +47,9 @@
 - 📝 **PR Başlık Oluşturma** - Conventional commit formatında akıllı başlık önerileri
 - 📄 **PR Açıklama Oluşturma** - Değişiklikleri özetleyen kapsamlı açıklamalar
 - 🤖 **AI Kod İncelemesi** - Kod incelemesi için yapılandırılmış diff çıktısı
+- 💬 **Commit Mesajı** - Staged/unstaged değişikliklerden akıllı commit mesajları
+- 🔐 **Secret Tarama** - API key ve parola sızıntılarını tespit eder
+- 🧪 **Test Önerileri** - Değişen kod için test senaryoları önerir
 - ⚡ **Sıfır Bağımlılık** - Sadece .NET BCL kullanır, harici paket gerekmez
 
 ---
@@ -59,6 +62,11 @@
 | 📊 **Kod İnceleme** | AI destekli kod incelemesi için yapılandırılmış çıktı |
 | 🏷️ **Başlık Oluşturma** | Conventional commit formatında PR başlığı |
 | 📋 **Açıklama Oluşturma** | Checklist'li kapsamlı PR açıklaması |
+| 💬 **Commit Mesajı** | Staged/unstaged değişikliklerden commit mesajı |
+| 🔐 **Secret Tarama** | API key, parola, token sızıntılarını tespit |
+| 📈 **Diff İstatistikleri** | Detaylı değişiklik metrikleri |
+| 🧪 **Test Önerileri** | Kod analizi ile test senaryoları |
+| 📝 **Changelog** | Commitlerden otomatik changelog oluşturma |
 | 🔍 **Branch Algılama** | Otomatik base/feature branch tespiti |
 | ✅ **Git Doğrulama** | Güvenli komut yürütme |
 
@@ -135,7 +143,9 @@ DiffPilot, MCP protokolü üzerinden stdin/stdout ile iletişim kurar. Aşağıd
 
 ## 🛠️ MCP Araçları
 
-DiffPilot dört ana araç sunar:
+DiffPilot dokuz araç sunar: dört PR inceleme aracı ve beş geliştirici üretkenlik aracı.
+
+### 📋 PR İnceleme Araçları
 
 ### 1️⃣ `get_pr_diff`
 
@@ -185,6 +195,98 @@ Kapsamlı PR açıklaması oluşturur.
 | `baseBranch` | string | ❌ | Hedef branch |
 | `ticketUrl` | string | ❌ | İlişkili ticket/issue URL'i |
 | `includeChecklist` | boolean | ❌ | PR checklist'i dahil et (varsayılan: true) |
+
+---
+
+### 🚀 Geliştirici Üretkenlik Araçları
+
+### 5️⃣ `generate_commit_message`
+
+Staged veya unstaged değişikliklerden commit mesajı oluşturur. Önce staged değişiklikleri kontrol eder, yoksa unstaged değişiklikleri kullanır.
+
+| Parametre | Tip | Zorunlu | Açıklama |
+|-----------|-----|---------|----------|
+| `style` | string | ❌ | Mesaj stili: `conventional` veya `simple` (varsayılan: conventional) |
+| `scope` | string | ❌ | Conventional commit için scope (ör: "api", "ui") |
+| `includeBody` | boolean | ❌ | Body bölümü dahil et (varsayılan: true) |
+
+**Örnek Kullanım:**
+```
+"Staged değişikliklerim için bir commit mesajı oluştur"
+```
+
+---
+
+### 6️⃣ `scan_secrets`
+
+Değişikliklerde yanlışlıkla commit edilmiş API anahtarları, parolalar ve tokenları tespit eder.
+
+| Parametre | Tip | Zorunlu | Açıklama |
+|-----------|-----|---------|----------|
+| `scanStaged` | boolean | ❌ | Staged değişiklikleri tara (varsayılan: true) |
+| `scanUnstaged` | boolean | ❌ | Unstaged değişiklikleri tara (varsayılan: true) |
+
+**Tespit Edilen Patternler:**
+- 🔑 API Keys (genel, AWS, GitHub, Slack)
+- 🔐 Private Keys (RSA, DSA, EC, OpenSSH)
+- 🔒 Passwords (URL'lerde ve değişken atamalarında)
+- 🎫 Tokens (Bearer, JWT, Azure connection strings)
+
+---
+
+### 7️⃣ `diff_stats`
+
+Değişiklikler hakkında detaylı istatistikler sağlar.
+
+| Parametre | Tip | Zorunlu | Açıklama |
+|-----------|-----|---------|----------|
+| `baseBranch` | string | ❌ | Karşılaştırma için base branch |
+| `featureBranch` | string | ❌ | Feature branch (varsayılan: mevcut branch) |
+| `includeWorkingDir` | boolean | ❌ | Working directory istatistiklerini dahil et (varsayılan: true) |
+
+**Sağlanan İstatistikler:**
+- 📊 Eklenen/silinen satır sayısı
+- 📁 Değişen dosya sayısı
+- 📈 Dosya türüne göre dağılım
+- 🔢 Commit sayısı (branch karşılaştırmasında)
+
+---
+
+### 8️⃣ `suggest_tests`
+
+Değişen kodu analiz ederek uygun test senaryoları önerir.
+
+| Parametre | Tip | Zorunlu | Açıklama |
+|-----------|-----|---------|----------|
+| `baseBranch` | string | ❌ | Karşılaştırma için base branch (yoksa working directory analiz edilir) |
+
+**Tespit Edilen Patternler:**
+- ⚡ Async/await kod
+- 🚨 Exception handling
+- ❓ Null kontrolleri
+- 🔄 Döngüler
+- 🗄️ Veritabanı çağrıları
+- 🌐 HTTP istekleri
+
+---
+
+### 9️⃣ `generate_changelog`
+
+Commitlerden changelog girdileri oluşturur (Keep a Changelog formatında).
+
+| Parametre | Tip | Zorunlu | Açıklama |
+|-----------|-----|---------|----------|
+| `baseBranch` | string | ❌ | Karşılaştırma için base branch (varsayılan: main) |
+| `featureBranch` | string | ❌ | Commit'lerin bulunduğu branch |
+| `format` | string | ❌ | Format: `keepachangelog` (kategorize) veya `simple` (düz liste) |
+
+**Kategoriler:**
+- ✨ Added - Yeni özellikler
+- 🔄 Changed - Değişiklikler
+- 🐛 Fixed - Hata düzeltmeleri
+- ⚠️ Deprecated - Kullanımdan kaldırılanlar
+- 🗑️ Removed - Silinenler
+- 🔒 Security - Güvenlik düzeltmeleri
 
 ---
 
@@ -253,7 +355,8 @@ DiffPilot/
     │   └── 📄 GitService.cs     # Git komut yürütme
     └── 📂 Tools/
         ├── 📄 ToolResult.cs     # Araç sonuç wrapper'ı
-        └── 📄 PrReviewTools.cs  # Araç implementasyonları
+        ├── 📄 PrReviewTools.cs  # PR inceleme araçları
+        └── 📄 DeveloperTools.cs # Geliştirici üretkenlik araçları
 ```
 
 ---
