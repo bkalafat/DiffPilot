@@ -6,4 +6,7 @@
     <Nullable>enable</Nullable>
     <RootNamespace>DiffPilot</RootNamespace>
   </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="tests\**" />
+  </ItemGroup>
 </Project>
