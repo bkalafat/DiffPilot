@@ -6,6 +6,7 @@
 
 [![.NET](https://img.shields.io/badge/.NET-9.0-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
 [![MCP](https://img.shields.io/badge/MCP-Protocol-00ADD8?style=for-the-badge&logo=json&logoColor=white)](https://modelcontextprotocol.io/)
+[![Tests](https://img.shields.io/badge/Tests-213%20Passing-success?style=for-the-badge&logo=xunit&logoColor=white)]()
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 [![GitHub](https://img.shields.io/badge/GitHub-bkalafat-181717?style=for-the-badge&logo=github)](https://github.com/bkalafat/DiffPilot)
 
@@ -88,6 +89,9 @@ cd DiffPilot
 
 # Derleyin
 dotnet build
+
+# Testleri çalıştırın (213 test)
+dotnet test
 
 # Çalıştırın
 dotnet run
@@ -343,25 +347,51 @@ Belirtilen aracı çalıştırır ve sonucu döndürür.
 
 ```
 DiffPilot/
-├── 📄 DiffPilot.csproj          # Proje dosyası
-├── 📄 DiffPilot.sln             # Solution dosyası
+├── 📄 .editorconfig              # Kod stili yapılandırması
+├── 📄 .gitattributes             # Git satır sonu ayarları
+├── 📄 Directory.Build.props      # Paylaşılan build özellikleri
+├── 📄 DiffPilot.csproj           # Ana proje dosyası
+├── 📄 DiffPilot.sln              # Solution dosyası (klasör organizasyonlu)
 ├── 📄 README.md                  # Bu dosya
-└── 📂 src/
-    ├── 📄 Program.cs            # Giriş noktası - JSON-RPC döngüsü
-    ├── 📂 Protocol/
-    │   ├── 📄 JsonRpcModels.cs  # İstek/Yanıt modelleri
-    │   └── 📄 McpHandlers.cs    # MCP metod işleyicileri
-    ├── 📂 Git/
-    │   └── 📄 GitService.cs     # Git komut yürütme
-    └── 📂 Tools/
-        ├── 📄 ToolResult.cs     # Araç sonuç wrapper'ı
-        ├── 📄 PrReviewTools.cs  # PR inceleme araçları
-        └── 📄 DeveloperTools.cs # Geliştirici üretkenlik araçları
+│
+├── 📂 .github/
+│   ├── 📄 copilot-instructions.md    # Copilot talimatları
+│   └── 📂 instructions/
+│       └── 📄 dotnet9-best-practices.md  # .NET 9 kodlama standartları
+│
+├── 📂 src/                       # Kaynak kod
+│   ├── 📄 Program.cs             # Giriş noktası - JSON-RPC döngüsü
+│   ├── 📂 Git/
+│   │   └── 📄 GitService.cs      # Git komut yürütme, branch algılama
+│   ├── 📂 Protocol/
+│   │   ├── 📄 JsonRpcModels.cs   # JSON-RPC 2.0 istek/yanıt modelleri
+│   │   └── 📄 McpHandlers.cs     # MCP metod işleyicileri
+│   └── 📂 Tools/
+│       ├── 📄 ToolResult.cs      # Araç sonuç wrapper'ı
+│       ├── 📄 PrReviewTools.cs   # PR inceleme araçları
+│       └── 📄 DeveloperTools.cs  # Geliştirici üretkenlik araçları
+│
+└── 📂 tests/                     # Unit testler (213 test)
+    ├── 📄 DiffPilot.Tests.csproj
+    ├── 📄 SecretScanningTests.cs       # Secret tarama regex testleri
+    ├── 📄 ChangelogGenerationTests.cs  # Changelog oluşturma testleri
+    ├── 📄 DiffStatsParsingTests.cs     # Diff istatistik parse testleri
+    ├── 📄 TestSuggestionAnalysisTests.cs # Test öneri analizi
+    ├── 📄 CommitTypeDetectionTests.cs  # Commit tipi algılama testleri
+    ├── 📄 PrGenerationTests.cs         # PR başlık/açıklama testleri
+    └── 📄 GitValidationTests.cs        # Git doğrulama testleri
 ```
 
 ---
 
 ## 🏗️ Teknik Detaylar
+
+### 🛠️ Tech Stack
+
+- **Dil:** C# 13 (.NET 9)
+- **Protokol:** MCP stdio transport (JSON-RPC 2.0)
+- **Test:** xUnit 2.9.2 (213 unit test)
+- **Bağımlılık:** Yok - sadece .NET BCL kullanır
 
 ### 📡 İletişim Protokolü
 
