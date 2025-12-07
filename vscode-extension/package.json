@@ -60,6 +60,12 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "mcpServerDefinitionProviders": [
+      {
+        "id": "diffpilot",
+        "label": "DiffPilot - MCP Server for Code Review"
+      }
+    ],
     "commands": [
       {
         "command": "diffpilot.getPrDiff",

@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 import { DiffPilotClient } from './client';
 
 let client: DiffPilotClient | undefined;
@@ -8,6 +9,28 @@ export async function activate(context: vscode.ExtensionContext) {
     
     // Initialize MCP client
     client = new DiffPilotClient(context);
+    
+    // Register MCP server definition provider for @mcp discovery
+    const mcpProvider = vscode.lm.registerMcpServerDefinitionProvider('diffpilot', {
+        provideMcpServerDefinitions: () => {
+            const config = vscode.workspace.getConfiguration('diffpilot');
+            const customServerPath = config.get<string>('serverPath');
+            const dotnetPath = config.get<string>('dotnetPath') || 'dotnet';
+            
+            // Use bundled server or custom path
+            const serverPath = customServerPath || path.join(context.extensionPath, 'server');
+            
+            // Create MCP server definition using constructor
+            const serverDef = new vscode.McpStdioServerDefinition(
+                'DiffPilot',
+                dotnetPath,
+                ['run', '--project', serverPath]
+            );
+            
+            return [serverDef];
+        }
+    });
+    context.subscriptions.push(mcpProvider);
     
     // Register commands
     const commands = [
