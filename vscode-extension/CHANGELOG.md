@@ -2,6 +2,23 @@
 
 All notable changes to the "DiffPilot" extension will be documented in this file.
 
+## [1.0.9] - 2025-12-07
+
+### Fixed
+- Server now uses workspace folder for git operations
+- Tools work correctly when invoked via MCP
+
+## [1.0.8] - 2025-12-07
+
+### Changed
+- Shortened tool descriptions for cleaner UI display
+
+## [1.0.7] - 2025-12-07
+
+### Fixed
+- Bundled server now includes TargetFramework for standalone builds
+- Server starts correctly without Directory.Build.props dependency
+
 ## [1.0.6] - 2025-12-07
 
 ### Fixed

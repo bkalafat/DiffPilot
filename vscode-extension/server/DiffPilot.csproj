@@ -8,6 +8,12 @@
        ============================================================================ -->
 
   <PropertyGroup>
+    <!-- Target Framework - Required for standalone builds -->
+    <TargetFramework>net9.0</TargetFramework>
+    <LangVersion>13</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    
     <OutputType>Exe</OutputType>
     <AssemblyName>DiffPilot</AssemblyName>
     <RootNamespace>DiffPilot</RootNamespace>

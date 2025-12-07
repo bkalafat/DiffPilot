@@ -2,7 +2,7 @@
   "name": "diffpilot",
   "displayName": "DiffPilot - MCP Server for Code Review",
   "description": "MCP (Model Context Protocol) server for AI code review. On-premise, works with GitHub Copilot, Claude, Azure DevOps, TFS. 100% local.",
-  "version": "1.0.6",
+  "version": "1.0.9",
   "publisher": "BurakKalafat",
   "author": {
     "name": "Burak Kalafat",

@@ -22,12 +22,15 @@ export async function activate(context: vscode.ExtensionContext) {
             // Use bundled server or custom path
             const serverPath = customServerPath || path.join(context.extensionPath, 'server');
             
-            // Create MCP server definition using constructor with all required parameters
+            // Get workspace folder for the server to use as working directory
+            const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '';
+            
+            // Create MCP server definition with workspace folder as environment variable
             const serverDef = new vscode.McpStdioServerDefinition(
                 'DiffPilot',
                 dotnetPath,
                 ['run', '--project', serverPath],
-                {} // environment variables
+                { DIFFPILOT_WORKSPACE: workspaceFolder }
             );
             
             return [serverDef];

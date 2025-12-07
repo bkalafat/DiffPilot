@@ -73,8 +73,7 @@ internal static class McpHandlers
             new
             {
                 name = "get_pr_diff",
-                description = "Fetches latest from git and returns the diff between base branch and current/feature branch. "
-                    + "Auto-detects branches if not specified. Returns raw diff output for any purpose.",
+                description = "Get diff between branches.",
                 inputSchema = new
                 {
                     type = "object",
@@ -103,8 +102,7 @@ internal static class McpHandlers
             new
             {
                 name = "review_pr_changes",
-                description = "Gets the PR diff and provides it with instructions for AI code review. "
-                    + "Use this when you want to perform a code review on the changes.",
+                description = "Review PR with AI instructions.",
                 inputSchema = new
                 {
                     type = "object",
@@ -128,8 +126,7 @@ internal static class McpHandlers
             new
             {
                 name = "generate_pr_title",
-                description = "Analyzes the diff and generates a concise, conventional PR title. "
-                    + "Returns a suggested title following conventional commit format.",
+                description = "Generate conventional PR title.",
                 inputSchema = new
                 {
                     type = "object",
@@ -153,8 +150,7 @@ internal static class McpHandlers
             new
             {
                 name = "generate_pr_description",
-                description = "Analyzes the diff and generates a complete PR description including summary, "
-                    + "list of changes, testing notes, and checklist. Ready to paste into PR.",
+                description = "Generate PR description with checklist.",
                 inputSchema = new
                 {
                     type = "object",
@@ -183,8 +179,7 @@ internal static class McpHandlers
             new
             {
                 name = "generate_commit_message",
-                description = "Analyzes staged changes (or unstaged if nothing staged) and generates a commit message. "
-                    + "Provides diff context and suggests conventional commit format.",
+                description = "Generate commit message from changes.",
                 inputSchema = new
                 {
                     type = "object",
@@ -213,8 +208,7 @@ internal static class McpHandlers
             new
             {
                 name = "scan_secrets",
-                description = "Scans staged and unstaged changes for accidentally committed secrets, API keys, "
-                    + "passwords, tokens, and other sensitive data patterns.",
+                description = "Detect secrets, keys, passwords.",
                 inputSchema = new
                 {
                     type = "object",
@@ -238,8 +232,7 @@ internal static class McpHandlers
             new
             {
                 name = "diff_stats",
-                description = "Gets detailed statistics about changes: lines added/removed, files changed, "
-                    + "breakdown by file type. Can analyze working directory or branch comparison.",
+                description = "Get change statistics by file.",
                 inputSchema = new
                 {
                     type = "object",
@@ -268,8 +261,7 @@ internal static class McpHandlers
             new
             {
                 name = "suggest_tests",
-                description = "Analyzes changed code and suggests appropriate test cases based on detected patterns "
-                    + "(async code, error handling, loops, database calls, etc.).",
+                description = "Suggest tests for changed code.",
                 inputSchema = new
                 {
                     type = "object",
@@ -288,8 +280,7 @@ internal static class McpHandlers
             new
             {
                 name = "generate_changelog",
-                description = "Generates changelog entries from commits between branches. "
-                    + "Categorizes commits into Added, Changed, Fixed, etc. following Keep a Changelog format.",
+                description = "Generate changelog from commits.",
                 inputSchema = new
                 {
                     type = "object",

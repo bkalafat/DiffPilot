@@ -24,6 +24,15 @@ namespace DiffPilot.Tools;
 /// </summary>
 internal static partial class DeveloperTools
 {
+    /// <summary>
+    /// Gets the working directory for git operations.
+    /// Uses DIFFPILOT_WORKSPACE environment variable if set, otherwise current directory.
+    /// </summary>
+    private static string GetWorkingDirectory() =>
+        Environment.GetEnvironmentVariable("DIFFPILOT_WORKSPACE") is { Length: > 0 } workspace
+            ? workspace
+            : GetWorkingDirectory();
+
     #region Tool: generate_commit_message
 
     /// <summary>
@@ -31,7 +40,7 @@ internal static partial class DeveloperTools
     /// </summary>
     public static async Task<ToolResult> GenerateCommitMessageAsync(JsonElement? arguments)
     {
-        var repoDir = Directory.GetCurrentDirectory();
+        var repoDir = GetWorkingDirectory();
 
         // Extract optional parameters
         string? style = "conventional";
@@ -231,7 +240,7 @@ internal static partial class DeveloperTools
     /// </summary>
     public static async Task<ToolResult> ScanSecretsAsync(JsonElement? arguments)
     {
-        var repoDir = Directory.GetCurrentDirectory();
+        var repoDir = GetWorkingDirectory();
 
         // Determine what to scan
         bool scanStaged = true;
@@ -471,7 +480,7 @@ internal static partial class DeveloperTools
     /// </summary>
     public static async Task<ToolResult> GetDiffStatsAsync(JsonElement? arguments)
     {
-        var repoDir = Directory.GetCurrentDirectory();
+        var repoDir = GetWorkingDirectory();
 
         // Extract optional parameters
         string? baseBranch = null;
@@ -738,7 +747,7 @@ internal static partial class DeveloperTools
     /// </summary>
     public static async Task<ToolResult> SuggestTestsAsync(JsonElement? arguments)
     {
-        var repoDir = Directory.GetCurrentDirectory();
+        var repoDir = GetWorkingDirectory();
 
         // Get diff - prefer branch comparison, fallback to working directory
         string diffOutput;
@@ -1063,7 +1072,7 @@ internal static partial class DeveloperTools
     /// </summary>
     public static async Task<ToolResult> GenerateChangelogAsync(JsonElement? arguments)
     {
-        var repoDir = Directory.GetCurrentDirectory();
+        var repoDir = GetWorkingDirectory();
 
         // Extract parameters
         string? baseBranch = "main";

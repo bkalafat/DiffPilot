@@ -53,9 +53,10 @@ async function activate(context) {
             const dotnetPath = config.get('dotnetPath') || 'dotnet';
             // Use bundled server or custom path
             const serverPath = customServerPath || path.join(context.extensionPath, 'server');
-            // Create MCP server definition using constructor with all required parameters
-            const serverDef = new vscode.McpStdioServerDefinition('DiffPilot', dotnetPath, ['run', '--project', serverPath], {} // environment variables
-            );
+            // Get workspace folder for the server to use as working directory
+            const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '';
+            // Create MCP server definition with workspace folder as environment variable
+            const serverDef = new vscode.McpStdioServerDefinition('DiffPilot', dotnetPath, ['run', '--project', serverPath], { DIFFPILOT_WORKSPACE: workspaceFolder });
             return [serverDef];
         }
     });

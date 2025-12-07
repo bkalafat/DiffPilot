@@ -31,6 +31,15 @@ internal static partial class PrReviewTools
     /// </summary>
     private const int MaxDiffContentLength = 500_000;
 
+    /// <summary>
+    /// Gets the working directory for git operations.
+    /// Uses DIFFPILOT_WORKSPACE environment variable if set, otherwise current directory.
+    /// </summary>
+    private static string GetWorkingDirectory() =>
+        Environment.GetEnvironmentVariable("DIFFPILOT_WORKSPACE") is { Length: > 0 } workspace
+            ? workspace
+            : GetWorkingDirectory();
+
     #region Tool: get_pr_diff
 
     /// <summary>
@@ -39,7 +48,7 @@ internal static partial class PrReviewTools
     /// </summary>
     public static async Task<ToolResult> GetPrDiffAsync(JsonElement? arguments)
     {
-        var repoDir = Directory.GetCurrentDirectory();
+        var repoDir = GetWorkingDirectory();
 
         // Extract optional parameters
         var (baseBranch, featureBranch, remote, error) = await ExtractBranchParametersAsync(
@@ -81,7 +90,7 @@ internal static partial class PrReviewTools
     /// </summary>
     public static async Task<ToolResult> ReviewPrChangesAsync(JsonElement? arguments)
     {
-        var repoDir = Directory.GetCurrentDirectory();
+        var repoDir = GetWorkingDirectory();
 
         // Extract parameters
         var (baseBranch, featureBranch, remote, error) = await ExtractBranchParametersAsync(
@@ -175,7 +184,7 @@ internal static partial class PrReviewTools
     /// </summary>
     public static async Task<ToolResult> GeneratePrTitleAsync(JsonElement? arguments)
     {
-        var repoDir = Directory.GetCurrentDirectory();
+        var repoDir = GetWorkingDirectory();
 
         // Extract parameters
         var (baseBranch, featureBranch, remote, error) = await ExtractBranchParametersAsync(
@@ -300,7 +309,7 @@ internal static partial class PrReviewTools
     /// </summary>
     public static async Task<ToolResult> GeneratePrDescriptionAsync(JsonElement? arguments)
     {
-        var repoDir = Directory.GetCurrentDirectory();
+        var repoDir = GetWorkingDirectory();
 
         // Extract parameters
         var (baseBranch, featureBranch, remote, error) = await ExtractBranchParametersAsync(
