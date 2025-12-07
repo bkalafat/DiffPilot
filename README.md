@@ -1,5 +1,3 @@
-<div align="center">
-
 # 🚀 DiffPilot
 
 **MCP Server for AI-Powered PR Code Review**
@@ -14,8 +12,6 @@
 *Works with GitHub Copilot, Claude, Azure DevOps, TFS • 100% Local • Zero Dependencies*
 
 [Features](#-features) • [Installation](#-installation) • [Tools](#-tools) • [Configuration](#-configuration)
-
-</div>
 
 ---
 
@@ -172,10 +168,8 @@ MIT License - see [LICENSE](LICENSE) file.
 
 ---
 
-<div align="center">
+---
 
 **[GitHub](https://github.com/bkalafat/DiffPilot)** • **[VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=BurakKalafat.diffpilot)** • **[@bkalafat](https://github.com/bkalafat)**
 
 ⭐ Star this repo if you find it useful!
-
-</div>
