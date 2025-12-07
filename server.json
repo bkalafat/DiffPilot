@@ -1,0 +1,21 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-10-17/server.schema.json",
+  "name": "io.github.bkalafat/diffpilot",
+  "description": "MCP server for PR code review, commit messages, changelogs, and secret detection.",
+  "repository": {
+    "url": "https://github.com/bkalafat/DiffPilot",
+    "source": "github"
+  },
+  "version": "1.0.6",
+  "packages": [
+    {
+      "registryType": "nuget",
+      "identifier": "DiffPilot",
+      "version": "1.0.6",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": []
+    }
+  ]
+}

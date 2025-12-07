@@ -64,3 +64,6 @@ vscode-extension/node_modules/
 vscode-extension/*.vsix
 vscode-extension/.vscode-test/
 *.vsix
+
+# MCP Registry tokens (secrets)
+.mcpregistry_*

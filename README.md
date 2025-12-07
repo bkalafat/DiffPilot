@@ -4,6 +4,8 @@
 
 **MCP Server for AI-Powered PR Code Review**
 
+<!-- mcp-name: io.github.bkalafat/diffpilot -->
+
 [![.NET](https://img.shields.io/badge/.NET-9.0-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
 [![MCP](https://img.shields.io/badge/MCP-Protocol-00ADD8?style=for-the-badge&logo=json&logoColor=white)](https://modelcontextprotocol.io/)
 [![VS Code](https://img.shields.io/badge/VS%20Code-Extension-007ACC?style=for-the-badge&logo=visualstudiocode&logoColor=white)](https://marketplace.visualstudio.com/items?itemName=BurakKalafat.diffpilot)
