@@ -11,6 +11,7 @@
 // NO FILES ARE CREATED - all output is returned directly.
 // ============================================================================
 
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -39,20 +40,27 @@ internal static partial class DeveloperTools
 
         if (arguments.HasValue)
         {
-            if (arguments.Value.TryGetProperty("style", out var styleElement)
-                && styleElement.ValueKind == JsonValueKind.String)
+            if (
+                arguments.Value.TryGetProperty("style", out var styleElement)
+                && styleElement.ValueKind == JsonValueKind.String
+            )
             {
                 style = styleElement.GetString() ?? "conventional";
             }
 
-            if (arguments.Value.TryGetProperty("scope", out var scopeElement)
-                && scopeElement.ValueKind == JsonValueKind.String)
+            if (
+                arguments.Value.TryGetProperty("scope", out var scopeElement)
+                && scopeElement.ValueKind == JsonValueKind.String
+            )
             {
                 scope = scopeElement.GetString();
             }
 
-            if (arguments.Value.TryGetProperty("includeBody", out var bodyElement)
-                && bodyElement.ValueKind == JsonValueKind.True || bodyElement.ValueKind == JsonValueKind.False)
+            if (
+                arguments.Value.TryGetProperty("includeBody", out var bodyElement)
+                    && bodyElement.ValueKind == JsonValueKind.True
+                || bodyElement.ValueKind == JsonValueKind.False
+            )
             {
                 includeBody = bodyElement.GetBoolean();
             }
@@ -60,7 +68,8 @@ internal static partial class DeveloperTools
 
         // First, check for staged changes
         var stagedResult = await GitService.RunGitCommandAsync("diff --cached --stat", repoDir);
-        bool hasStaged = stagedResult.ExitCode == 0 && !string.IsNullOrWhiteSpace(stagedResult.Output);
+        bool hasStaged =
+            stagedResult.ExitCode == 0 && !string.IsNullOrWhiteSpace(stagedResult.Output);
 
         // Get the diff (staged first, fallback to unstaged)
         string diffOutput;
@@ -83,7 +92,8 @@ internal static partial class DeveloperTools
             if (unstagedResult.ExitCode != 0 || string.IsNullOrWhiteSpace(unstagedResult.Output))
             {
                 return ToolResult.Error(
-                    "No changes found. Please stage your changes with `git add` or make some modifications first.");
+                    "No changes found. Please stage your changes with `git add` or make some modifications first."
+                );
             }
 
             var unstagedDiff = await GitService.RunGitCommandAsync("diff", repoDir);
@@ -109,9 +119,9 @@ internal static partial class DeveloperTools
 
         // Build the response
         var sb = new StringBuilder();
-        sb.AppendLine($"# Commit Message Generator");
+        sb.AppendLine("# Commit Message Generator");
         sb.AppendLine();
-        sb.AppendLine($"**Analyzing:** {changeType} changes");
+        sb.Append("**Analyzing:** ").Append(changeType).AppendLine(" changes");
         sb.AppendLine();
 
         if (statsResult.ExitCode == 0 && !string.IsNullOrWhiteSpace(statsResult.Output))
@@ -124,10 +134,13 @@ internal static partial class DeveloperTools
         }
 
         sb.AppendLine("## Change Analysis");
-        sb.AppendLine($"- **Files modified:** {analysis.FilesChanged}");
-        sb.AppendLine($"- **Lines added:** {analysis.LinesAdded}");
-        sb.AppendLine($"- **Lines removed:** {analysis.LinesRemoved}");
-        sb.AppendLine($"- **Primary change type:** {analysis.ChangeType}");
+        sb.Append("- **Files modified:** ")
+            .AppendLine(analysis.FilesChanged.ToString(CultureInfo.InvariantCulture));
+        sb.Append("- **Lines added:** ")
+            .AppendLine(analysis.LinesAdded.ToString(CultureInfo.InvariantCulture));
+        sb.Append("- **Lines removed:** ")
+            .AppendLine(analysis.LinesRemoved.ToString(CultureInfo.InvariantCulture));
+        sb.Append("- **Primary change type:** ").AppendLine(analysis.ChangeType);
         sb.AppendLine();
 
         sb.AppendLine("## Suggested Commit Message");
@@ -138,9 +151,9 @@ internal static partial class DeveloperTools
         var scopePart = !string.IsNullOrWhiteSpace(scope) ? $"({scope})" : "";
 
         sb.AppendLine("```");
-        if (style?.ToLower() == "conventional")
+        if (string.Equals(style, "conventional", StringComparison.OrdinalIgnoreCase))
         {
-            sb.AppendLine($"{commitType}{scopePart}: <brief description>");
+            sb.Append(commitType).Append(scopePart).AppendLine(": <brief description>");
             if (includeBody)
             {
                 sb.AppendLine();
@@ -164,7 +177,9 @@ internal static partial class DeveloperTools
         sb.AppendLine(TruncateContent(diffOutput, 50000));
         sb.AppendLine("```");
         sb.AppendLine();
-        sb.AppendLine("Please analyze the diff and generate an appropriate commit message based on the actual changes.");
+        sb.AppendLine(
+            "Please analyze the diff and generate an appropriate commit message based on the actual changes."
+        );
 
         return ToolResult.Success(sb.ToString());
     }
@@ -182,11 +197,21 @@ internal static partial class DeveloperTools
             return "docs";
 
         // Check for configuration
-        if (lowerDiff.Contains("config") || lowerDiff.Contains(".json") || lowerDiff.Contains(".yaml") || lowerDiff.Contains(".yml"))
+        if (
+            lowerDiff.Contains("config")
+            || lowerDiff.Contains(".json")
+            || lowerDiff.Contains(".yaml")
+            || lowerDiff.Contains(".yml")
+        )
             return "chore";
 
         // Check for bug fixes
-        if (lowerDiff.Contains("fix") || lowerDiff.Contains("bug") || lowerDiff.Contains("error") || lowerDiff.Contains("issue"))
+        if (
+            lowerDiff.Contains("fix")
+            || lowerDiff.Contains("bug")
+            || lowerDiff.Contains("error")
+            || lowerDiff.Contains("issue")
+        )
             return "fix";
 
         // Check for refactoring (more deletions or similar add/remove)
@@ -265,24 +290,34 @@ internal static partial class DeveloperTools
         {
             sb.AppendLine("## ✅ No Secrets Detected");
             sb.AppendLine();
-            sb.AppendLine("No obvious secrets, API keys, or sensitive data patterns were found in the changes.");
+            sb.AppendLine(
+                "No obvious secrets, API keys, or sensitive data patterns were found in the changes."
+            );
             sb.AppendLine();
-            sb.AppendLine("> **Note:** This is a pattern-based scan and may not catch all secrets.");
-            sb.AppendLine("> Always review your changes manually before committing sensitive code.");
+            sb.AppendLine(
+                "> **Note:** This is a pattern-based scan and may not catch all secrets."
+            );
+            sb.AppendLine(
+                "> Always review your changes manually before committing sensitive code."
+            );
         }
         else
         {
-            sb.AppendLine($"## ⚠️ {findings.Count} Potential Secret(s) Found");
+            sb.Append("## ⚠️ ").Append(findings.Count).AppendLine(" Potential Secret(s) Found");
             sb.AppendLine();
             sb.AppendLine("The following patterns may indicate sensitive data:");
             sb.AppendLine();
 
             foreach (var finding in findings)
             {
-                sb.AppendLine($"### 🚨 {finding.Type}");
-                sb.AppendLine($"- **Location:** {finding.Location} ({finding.Source})");
-                sb.AppendLine($"- **Pattern:** `{finding.Pattern}`");
-                sb.AppendLine($"- **Match:** `{MaskSecret(finding.Match)}`");
+                sb.Append("### 🚨 ").AppendLine(finding.Type);
+                sb.Append("- **Location:** ")
+                    .Append(finding.Location)
+                    .Append(" (")
+                    .Append(finding.Source)
+                    .AppendLine(")");
+                sb.Append("- **Pattern:** `").Append(finding.Pattern).AppendLine("`");
+                sb.Append("- **Match:** `").Append(MaskSecret(finding.Match)).AppendLine("`");
                 sb.AppendLine();
             }
 
@@ -294,8 +329,12 @@ internal static partial class DeveloperTools
             sb.AppendLine("4. **Consider using** `.env` files (gitignored) for local development");
         }
 
-        return findings.Count > 0 
-            ? new ToolResult { Content = [new ContentItem { Type = "text", Text = sb.ToString() }], IsError = true }
+        return findings.Count > 0
+            ? new ToolResult
+            {
+                Content = [new ContentItem { Type = "text", Text = sb.ToString() }],
+                IsError = true,
+            }
             : ToolResult.Success(sb.ToString());
     }
 
@@ -308,14 +347,14 @@ internal static partial class DeveloperTools
         foreach (var line in lines)
         {
             // Track current file
-            if (line.StartsWith("+++ b/"))
+            if (line.StartsWith("+++ b/", StringComparison.Ordinal))
             {
                 currentFile = line[6..];
                 continue;
             }
 
             // Only scan added lines
-            if (!line.StartsWith('+') || line.StartsWith("+++"))
+            if (!line.StartsWith('+') || line.StartsWith("+++", StringComparison.Ordinal))
                 continue;
 
             var content = line[1..]; // Remove the + prefix
@@ -326,14 +365,16 @@ internal static partial class DeveloperTools
                 var matches = pattern.Regex.Matches(content);
                 foreach (Match match in matches)
                 {
-                    findings.Add(new SecretFinding
-                    {
-                        Type = pattern.Name,
-                        Pattern = pattern.Description,
-                        Match = match.Value,
-                        Location = currentFile,
-                        Source = source
-                    });
+                    findings.Add(
+                        new SecretFinding
+                        {
+                            Type = pattern.Name,
+                            Pattern = pattern.Description,
+                            Match = match.Value,
+                            Location = currentFile,
+                            Source = source,
+                        }
+                    );
                 }
             }
         }
@@ -358,13 +399,20 @@ internal static partial class DeveloperTools
         new("Password in URL", "Password in connection string", PasswordUrlPattern()),
         new("Password Assignment", "Password variable assignment", PasswordAssignPattern()),
         new("Bearer Token", "Bearer authentication token", BearerTokenPattern()),
-        new("Azure Connection String", "Azure storage/service connection string", AzureConnectionPattern()),
+        new(
+            "Azure Connection String",
+            "Azure storage/service connection string",
+            AzureConnectionPattern()
+        ),
         new("JWT Token", "JSON Web Token", JwtPattern()),
         new("Slack Token", "Slack bot/webhook token", SlackTokenPattern()),
         new("Generic Secret", "Generic secret/token pattern", GenericSecretPattern()),
     ];
 
-    [GeneratedRegex(@"['""]?[a-zA-Z0-9_-]*[aA][pP][iI][_-]?[kK][eE][yY]['""]?\s*[:=]\s*['""]?[a-zA-Z0-9_\-]{20,}['""]?", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(
+        @"['""]?[a-zA-Z0-9_-]*[aA][pP][iI][_-]?[kK][eE][yY]['""]?\s*[:=]\s*['""]?[a-zA-Z0-9_\-]{20,}['""]?",
+        RegexOptions.IgnoreCase
+    )]
     private static partial Regex ApiKeyPattern();
 
     [GeneratedRegex(@"AKIA[0-9A-Z]{16}")]
@@ -397,10 +445,14 @@ internal static partial class DeveloperTools
     [GeneratedRegex(@"xox[baprs]-[0-9]{10,13}-[a-zA-Z0-9-]+")]
     private static partial Regex SlackTokenPattern();
 
-    [GeneratedRegex(@"['""]?(?:secret|token|key|auth)['""]?\s*[:=]\s*['""][a-zA-Z0-9_\-]{16,}['""]", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(
+        @"['""]?(?:secret|token|key|auth)['""]?\s*[:=]\s*['""][a-zA-Z0-9_\-]{16,}['""]",
+        RegexOptions.IgnoreCase
+    )]
     private static partial Regex GenericSecretPattern();
 
     private record SecretPattern(string Name, string Description, Regex Regex);
+
     private record SecretFinding
     {
         public required string Type { get; init; }
@@ -428,14 +480,18 @@ internal static partial class DeveloperTools
 
         if (arguments.HasValue)
         {
-            if (arguments.Value.TryGetProperty("baseBranch", out var baseElement)
-                && baseElement.ValueKind == JsonValueKind.String)
+            if (
+                arguments.Value.TryGetProperty("baseBranch", out var baseElement)
+                && baseElement.ValueKind == JsonValueKind.String
+            )
             {
                 baseBranch = baseElement.GetString();
             }
 
-            if (arguments.Value.TryGetProperty("featureBranch", out var featureElement)
-                && featureElement.ValueKind == JsonValueKind.String)
+            if (
+                arguments.Value.TryGetProperty("featureBranch", out var featureElement)
+                && featureElement.ValueKind == JsonValueKind.String
+            )
             {
                 featureBranch = featureElement.GetString();
             }
@@ -457,7 +513,10 @@ internal static partial class DeveloperTools
             sb.AppendLine();
 
             // Staged changes
-            var stagedStat = await GitService.RunGitCommandAsync("diff --cached --numstat", repoDir);
+            var stagedStat = await GitService.RunGitCommandAsync(
+                "diff --cached --numstat",
+                repoDir
+            );
             var stagedStats = ParseNumstat(stagedStat.Output);
 
             // Unstaged changes
@@ -467,12 +526,19 @@ internal static partial class DeveloperTools
             sb.AppendLine("### Staged Changes");
             if (stagedStats.Files > 0)
             {
-                sb.AppendLine($"| Metric | Value |");
-                sb.AppendLine($"|--------|-------|");
-                sb.AppendLine($"| Files | {stagedStats.Files} |");
-                sb.AppendLine($"| Lines Added | +{stagedStats.Added} |");
-                sb.AppendLine($"| Lines Removed | -{stagedStats.Removed} |");
-                sb.AppendLine($"| Net Change | {stagedStats.Added - stagedStats.Removed:+#;-#;0} |");
+                sb.AppendLine("| Metric | Value |");
+                sb.AppendLine("|--------|-------|");
+                sb.Append("| Files | ").Append(stagedStats.Files).AppendLine(" |");
+                sb.Append("| Lines Added | +").Append(stagedStats.Added).AppendLine(" |");
+                sb.Append("| Lines Removed | -").Append(stagedStats.Removed).AppendLine(" |");
+                sb.Append("| Net Change | ")
+                    .Append(
+                        (stagedStats.Added - stagedStats.Removed).ToString(
+                            "+#;-#;0",
+                            CultureInfo.InvariantCulture
+                        )
+                    )
+                    .AppendLine(" |");
             }
             else
             {
@@ -483,12 +549,19 @@ internal static partial class DeveloperTools
             sb.AppendLine("### Unstaged Changes");
             if (unstagedStats.Files > 0)
             {
-                sb.AppendLine($"| Metric | Value |");
-                sb.AppendLine($"|--------|-------|");
-                sb.AppendLine($"| Files | {unstagedStats.Files} |");
-                sb.AppendLine($"| Lines Added | +{unstagedStats.Added} |");
-                sb.AppendLine($"| Lines Removed | -{unstagedStats.Removed} |");
-                sb.AppendLine($"| Net Change | {unstagedStats.Added - unstagedStats.Removed:+#;-#;0} |");
+                sb.AppendLine("| Metric | Value |");
+                sb.AppendLine("|--------|-------|");
+                sb.Append("| Files | ").Append(unstagedStats.Files).AppendLine(" |");
+                sb.Append("| Lines Added | +").Append(unstagedStats.Added).AppendLine(" |");
+                sb.Append("| Lines Removed | -").Append(unstagedStats.Removed).AppendLine(" |");
+                sb.Append("| Net Change | ")
+                    .Append(
+                        (unstagedStats.Added - unstagedStats.Removed).ToString(
+                            "+#;-#;0",
+                            CultureInfo.InvariantCulture
+                        )
+                    )
+                    .AppendLine(" |");
             }
             else
             {
@@ -508,11 +581,19 @@ internal static partial class DeveloperTools
 
             if (string.IsNullOrWhiteSpace(baseBranch))
             {
-                var baseInfo = await GitService.FindBaseBranchAsync(repoDir, featureBranch, "origin");
+                var baseInfo = await GitService.FindBaseBranchAsync(
+                    repoDir,
+                    featureBranch,
+                    "origin"
+                );
                 baseBranch = baseInfo?.BaseBranch ?? "main";
             }
 
-            sb.AppendLine($"## Branch Comparison: `{baseBranch}` → `{featureBranch}`");
+            sb.Append("## Branch Comparison: `")
+                .Append(baseBranch)
+                .Append("` → `")
+                .Append(featureBranch)
+                .AppendLine("`");
             sb.AppendLine();
 
             // Fetch latest
@@ -520,24 +601,37 @@ internal static partial class DeveloperTools
 
             // Get numstat for branch comparison
             var branchStat = await GitService.RunGitCommandAsync(
-                $"diff --numstat origin/{baseBranch}...{featureBranch}", repoDir);
+                $"diff --numstat origin/{baseBranch}...{featureBranch}",
+                repoDir
+            );
             var branchStats = ParseNumstat(branchStat.Output);
 
             // Get shortstat for summary
             var shortstat = await GitService.RunGitCommandAsync(
-                $"diff --shortstat origin/{baseBranch}...{featureBranch}", repoDir);
+                $"diff --shortstat origin/{baseBranch}...{featureBranch}",
+                repoDir
+            );
 
             // Get commit count
             var commitCount = await GitService.RunGitCommandAsync(
-                $"rev-list --count origin/{baseBranch}..{featureBranch}", repoDir);
+                $"rev-list --count origin/{baseBranch}..{featureBranch}",
+                repoDir
+            );
 
             sb.AppendLine("| Metric | Value |");
             sb.AppendLine("|--------|-------|");
-            sb.AppendLine($"| Commits | {commitCount.Output.Trim()} |");
-            sb.AppendLine($"| Files Changed | {branchStats.Files} |");
-            sb.AppendLine($"| Lines Added | +{branchStats.Added} |");
-            sb.AppendLine($"| Lines Removed | -{branchStats.Removed} |");
-            sb.AppendLine($"| Net Change | {branchStats.Added - branchStats.Removed:+#;-#;0} |");
+            sb.Append("| Commits | ").Append(commitCount.Output.Trim()).AppendLine(" |");
+            sb.Append("| Files Changed | ").Append(branchStats.Files).AppendLine(" |");
+            sb.Append("| Lines Added | +").Append(branchStats.Added).AppendLine(" |");
+            sb.Append("| Lines Removed | -").Append(branchStats.Removed).AppendLine(" |");
+            sb.Append("| Net Change | ")
+                .Append(
+                    (branchStats.Added - branchStats.Removed).ToString(
+                        "+#;-#;0",
+                        CultureInfo.InvariantCulture
+                    )
+                )
+                .AppendLine(" |");
             sb.AppendLine();
 
             // File breakdown by type
@@ -549,17 +643,25 @@ internal static partial class DeveloperTools
                 sb.AppendLine("|------|-------|---------|");
                 foreach (var file in branchStats.FileDetails.Take(20))
                 {
-                    sb.AppendLine($"| `{file.Name}` | +{file.Added} | -{file.Removed} |");
+                    sb.Append("| `")
+                        .Append(file.Name)
+                        .Append("` | +")
+                        .Append(file.Added)
+                        .Append(" | -")
+                        .Append(file.Removed)
+                        .AppendLine(" |");
                 }
                 if (branchStats.FileDetails.Count > 20)
                 {
-                    sb.AppendLine($"| *...and {branchStats.FileDetails.Count - 20} more files* | | |");
+                    sb.Append("| *...and ")
+                        .Append(branchStats.FileDetails.Count - 20)
+                        .AppendLine(" more files* | | |");
                 }
                 sb.AppendLine();
 
                 // Group by extension
-                var byExtension = branchStats.FileDetails
-                    .GroupBy(f => Path.GetExtension(f.Name).ToLowerInvariant())
+                var byExtension = branchStats
+                    .FileDetails.GroupBy(f => Path.GetExtension(f.Name).ToLowerInvariant())
                     .Where(g => !string.IsNullOrEmpty(g.Key))
                     .OrderByDescending(g => g.Sum(f => f.Added + f.Removed))
                     .Take(10);
@@ -570,7 +672,15 @@ internal static partial class DeveloperTools
                 sb.AppendLine("|-----------|-------|-------|---------|");
                 foreach (var group in byExtension)
                 {
-                    sb.AppendLine($"| `{group.Key}` | {group.Count()} | +{group.Sum(f => f.Added)} | -{group.Sum(f => f.Removed)} |");
+                    sb.Append("| `")
+                        .Append(group.Key)
+                        .Append("` | ")
+                        .Append(group.Count())
+                        .Append(" | +")
+                        .Append(group.Sum(f => f.Added))
+                        .Append(" | -")
+                        .Append(group.Sum(f => f.Removed))
+                        .AppendLine(" |");
                 }
             }
         }
@@ -589,8 +699,14 @@ internal static partial class DeveloperTools
             var parts = line.Split('\t');
             if (parts.Length >= 3)
             {
-                var added = parts[0] == "-" ? 0 : int.TryParse(parts[0], out var a) ? a : 0;
-                var removed = parts[1] == "-" ? 0 : int.TryParse(parts[1], out var r) ? r : 0;
+                var added =
+                    parts[0] == "-" ? 0
+                    : int.TryParse(parts[0], out var a) ? a
+                    : 0;
+                var removed =
+                    parts[1] == "-" ? 0
+                    : int.TryParse(parts[1], out var r) ? r
+                    : 0;
                 var fileName = parts[2];
 
                 stats.Added += added;
@@ -628,19 +744,26 @@ internal static partial class DeveloperTools
         string diffOutput;
         string context;
 
-        if (arguments.HasValue && arguments.Value.TryGetProperty("baseBranch", out var baseElement)
-            && baseElement.ValueKind == JsonValueKind.String)
+        if (
+            arguments.HasValue
+            && arguments.Value.TryGetProperty("baseBranch", out var baseElement)
+            && baseElement.ValueKind == JsonValueKind.String
+        )
         {
             var baseBranch = baseElement.GetString()!;
             var featureBranch = await GitService.GetCurrentBranchAsync(repoDir) ?? "HEAD";
 
             await GitService.RunGitCommandAsync("fetch origin", repoDir);
             var branchDiff = await GitService.RunGitCommandAsync(
-                $"diff origin/{baseBranch}...{featureBranch}", repoDir);
+                $"diff origin/{baseBranch}...{featureBranch}",
+                repoDir
+            );
 
             if (branchDiff.ExitCode != 0 || string.IsNullOrWhiteSpace(branchDiff.Output))
             {
-                return ToolResult.Error($"Failed to get diff between {baseBranch} and {featureBranch}");
+                return ToolResult.Error(
+                    $"Failed to get diff between {baseBranch} and {featureBranch}"
+                );
             }
             diffOutput = branchDiff.Output;
             context = $"branch comparison ({baseBranch} → {featureBranch})";
@@ -672,7 +795,7 @@ internal static partial class DeveloperTools
         var sb = new StringBuilder();
         sb.AppendLine("# 🧪 Test Suggestions");
         sb.AppendLine();
-        sb.AppendLine($"**Analyzing:** {context}");
+        sb.Append("**Analyzing:** ").AppendLine(context);
         sb.AppendLine();
 
         sb.AppendLine("## Changed Files");
@@ -680,24 +803,28 @@ internal static partial class DeveloperTools
         foreach (var file in analysis.ChangedFiles.Take(10))
         {
             var icon = file.IsTestFile ? "✅" : "📝";
-            sb.AppendLine($"- {icon} `{file.Name}`");
+            sb.Append("- ").Append(icon).Append(" `").Append(file.Name).AppendLine("`");
         }
         if (analysis.ChangedFiles.Count > 10)
         {
-            sb.AppendLine($"- *...and {analysis.ChangedFiles.Count - 10} more files*");
+            sb.Append("- *...and ")
+                .Append(analysis.ChangedFiles.Count - 10)
+                .AppendLine(" more files*");
         }
         sb.AppendLine();
 
         // Identify files needing tests
-        var filesNeedingTests = analysis.ChangedFiles
-            .Where(f => !f.IsTestFile && !f.IsConfig && !f.IsDocumentation)
+        var filesNeedingTests = analysis
+            .ChangedFiles.Where(f => !f.IsTestFile && !f.IsConfig && !f.IsDocumentation)
             .ToList();
 
         if (filesNeedingTests.Count == 0)
         {
             sb.AppendLine("## ✅ All Changes Covered");
             sb.AppendLine();
-            sb.AppendLine("The changes appear to be in test files, configuration, or documentation.");
+            sb.AppendLine(
+                "The changes appear to be in test files, configuration, or documentation."
+            );
         }
         else
         {
@@ -706,7 +833,7 @@ internal static partial class DeveloperTools
 
             foreach (var file in filesNeedingTests)
             {
-                sb.AppendLine($"### `{file.Name}`");
+                sb.Append("### `").Append(file.Name).AppendLine("`");
                 sb.AppendLine();
 
                 if (file.AddedMethods.Count > 0)
@@ -714,7 +841,7 @@ internal static partial class DeveloperTools
                     sb.AppendLine("**New/Modified Methods:**");
                     foreach (var method in file.AddedMethods)
                     {
-                        sb.AppendLine($"- `{method}`");
+                        sb.Append("- `").Append(method).AppendLine("`");
                     }
                     sb.AppendLine();
                 }
@@ -770,8 +897,15 @@ internal static partial class DeveloperTools
                 }
 
                 // Default suggestions if nothing specific detected
-                if (!file.HasAsyncCode && !file.HasExceptionHandling && !file.HasNullChecks &&
-                    !file.HasConditionalLogic && !file.HasLoops && !file.HasDatabaseCalls && !file.HasHttpCalls)
+                if (
+                    !file.HasAsyncCode
+                    && !file.HasExceptionHandling
+                    && !file.HasNullChecks
+                    && !file.HasConditionalLogic
+                    && !file.HasLoops
+                    && !file.HasDatabaseCalls
+                    && !file.HasHttpCalls
+                )
                 {
                     sb.AppendLine("- [ ] Test happy path scenario");
                     sb.AppendLine("- [ ] Test edge cases");
@@ -799,7 +933,7 @@ internal static partial class DeveloperTools
 
         foreach (var line in diff.Split('\n'))
         {
-            if (line.StartsWith("+++ b/"))
+            if (line.StartsWith("+++ b/", StringComparison.Ordinal))
             {
                 if (currentFile.Name != "unknown")
                 {
@@ -811,12 +945,12 @@ internal static partial class DeveloperTools
                     Name = fileName,
                     IsTestFile = IsTestFile(fileName),
                     IsConfig = IsConfigFile(fileName),
-                    IsDocumentation = IsDocFile(fileName)
+                    IsDocumentation = IsDocFile(fileName),
                 };
                 continue;
             }
 
-            if (!line.StartsWith('+') || line.StartsWith("+++"))
+            if (!line.StartsWith('+') || line.StartsWith("+++", StringComparison.Ordinal))
                 continue;
 
             var content = line[1..]; // Remove the + prefix
@@ -828,19 +962,36 @@ internal static partial class DeveloperTools
             if (content.Contains("catch") || content.Contains("throw "))
                 currentFile.HasExceptionHandling = true;
 
-            if (content.Contains("== null") || content.Contains("!= null") || content.Contains("?? ") || content.Contains("?."))
+            if (
+                content.Contains("== null")
+                || content.Contains("!= null")
+                || content.Contains("?? ")
+                || content.Contains("?.")
+            )
                 currentFile.HasNullChecks = true;
 
             if (content.Contains("if ") || content.Contains("switch ") || content.Contains("? "))
                 currentFile.HasConditionalLogic = true;
 
-            if (content.Contains("for ") || content.Contains("foreach ") || content.Contains("while "))
+            if (
+                content.Contains("for ")
+                || content.Contains("foreach ")
+                || content.Contains("while ")
+            )
                 currentFile.HasLoops = true;
 
-            if (content.Contains("DbContext") || content.Contains("SqlConnection") || content.Contains("Repository"))
+            if (
+                content.Contains("DbContext")
+                || content.Contains("SqlConnection")
+                || content.Contains("Repository")
+            )
                 currentFile.HasDatabaseCalls = true;
 
-            if (content.Contains("HttpClient") || content.Contains("HttpRequest") || content.Contains("WebClient"))
+            if (
+                content.Contains("HttpClient")
+                || content.Contains("HttpRequest")
+                || content.Contains("WebClient")
+            )
                 currentFile.HasHttpCalls = true;
 
             // Extract method names
@@ -860,24 +1011,26 @@ internal static partial class DeveloperTools
     }
 
     private static bool IsTestFile(string fileName) =>
-        fileName.Contains("Test", StringComparison.OrdinalIgnoreCase) ||
-        fileName.Contains("Spec", StringComparison.OrdinalIgnoreCase) ||
-        fileName.Contains(".test.", StringComparison.OrdinalIgnoreCase) ||
-        fileName.Contains(".spec.", StringComparison.OrdinalIgnoreCase);
+        fileName.Contains("Test", StringComparison.OrdinalIgnoreCase)
+        || fileName.Contains("Spec", StringComparison.OrdinalIgnoreCase)
+        || fileName.Contains(".test.", StringComparison.OrdinalIgnoreCase)
+        || fileName.Contains(".spec.", StringComparison.OrdinalIgnoreCase);
 
     private static bool IsConfigFile(string fileName) =>
-        fileName.EndsWith(".json", StringComparison.OrdinalIgnoreCase) ||
-        fileName.EndsWith(".yaml", StringComparison.OrdinalIgnoreCase) ||
-        fileName.EndsWith(".yml", StringComparison.OrdinalIgnoreCase) ||
-        fileName.EndsWith(".config", StringComparison.OrdinalIgnoreCase) ||
-        fileName.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase);
+        fileName.EndsWith(".json", StringComparison.OrdinalIgnoreCase)
+        || fileName.EndsWith(".yaml", StringComparison.OrdinalIgnoreCase)
+        || fileName.EndsWith(".yml", StringComparison.OrdinalIgnoreCase)
+        || fileName.EndsWith(".config", StringComparison.OrdinalIgnoreCase)
+        || fileName.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase);
 
     private static bool IsDocFile(string fileName) =>
-        fileName.EndsWith(".md", StringComparison.OrdinalIgnoreCase) ||
-        fileName.EndsWith(".txt", StringComparison.OrdinalIgnoreCase) ||
-        fileName.EndsWith(".rst", StringComparison.OrdinalIgnoreCase);
+        fileName.EndsWith(".md", StringComparison.OrdinalIgnoreCase)
+        || fileName.EndsWith(".txt", StringComparison.OrdinalIgnoreCase)
+        || fileName.EndsWith(".rst", StringComparison.OrdinalIgnoreCase);
 
-    [GeneratedRegex(@"(?:public|private|protected|internal)?\s*(?:static\s+)?(?:async\s+)?(?:\w+(?:<[^>]+>)?)\s+(\w+)\s*\(")]
+    [GeneratedRegex(
+        @"(?:public|private|protected|internal)?\s*(?:static\s+)?(?:async\s+)?(?:\w+(?:<[^>]+>)?)\s+(\w+)\s*\("
+    )]
     private static partial Regex MethodSignaturePattern();
 
     private record TestAnalysis
@@ -919,20 +1072,26 @@ internal static partial class DeveloperTools
 
         if (arguments.HasValue)
         {
-            if (arguments.Value.TryGetProperty("baseBranch", out var baseElement)
-                && baseElement.ValueKind == JsonValueKind.String)
+            if (
+                arguments.Value.TryGetProperty("baseBranch", out var baseElement)
+                && baseElement.ValueKind == JsonValueKind.String
+            )
             {
                 baseBranch = baseElement.GetString() ?? "main";
             }
 
-            if (arguments.Value.TryGetProperty("featureBranch", out var featureElement)
-                && featureElement.ValueKind == JsonValueKind.String)
+            if (
+                arguments.Value.TryGetProperty("featureBranch", out var featureElement)
+                && featureElement.ValueKind == JsonValueKind.String
+            )
             {
                 featureBranch = featureElement.GetString();
             }
 
-            if (arguments.Value.TryGetProperty("format", out var formatElement)
-                && formatElement.ValueKind == JsonValueKind.String)
+            if (
+                arguments.Value.TryGetProperty("format", out var formatElement)
+                && formatElement.ValueKind == JsonValueKind.String
+            )
             {
                 format = formatElement.GetString() ?? "keepachangelog";
             }
@@ -950,7 +1109,8 @@ internal static partial class DeveloperTools
         // Get commit log
         var logResult = await GitService.RunGitCommandAsync(
             $"log origin/{baseBranch}..{featureBranch} --pretty=format:\"%h|%s|%an|%ad\" --date=short",
-            repoDir);
+            repoDir
+        );
 
         if (logResult.ExitCode != 0)
         {
@@ -959,12 +1119,14 @@ internal static partial class DeveloperTools
 
         if (string.IsNullOrWhiteSpace(logResult.Output))
         {
-            return ToolResult.Success($"No commits found between `{baseBranch}` and `{featureBranch}`.");
+            return ToolResult.Success(
+                $"No commits found between `{baseBranch}` and `{featureBranch}`."
+            );
         }
 
         // Parse commits
-        var commits = logResult.Output
-            .Split('\n', StringSplitOptions.RemoveEmptyEntries)
+        var commits = logResult
+            .Output.Split('\n', StringSplitOptions.RemoveEmptyEntries)
             .Select(line =>
             {
                 var parts = line.Split('|');
@@ -973,7 +1135,7 @@ internal static partial class DeveloperTools
                     Hash = parts.Length > 0 ? parts[0] : "",
                     Message = parts.Length > 1 ? parts[1] : "",
                     Author = parts.Length > 2 ? parts[2] : "",
-                    Date = parts.Length > 3 ? parts[3] : ""
+                    Date = parts.Length > 3 ? parts[3] : "",
                 };
             })
             .ToList();
@@ -985,9 +1147,16 @@ internal static partial class DeveloperTools
         var sb = new StringBuilder();
         sb.AppendLine("# 📝 Changelog");
         sb.AppendLine();
-        sb.AppendLine($"**Branch:** `{featureBranch}` (compared to `{baseBranch}`)");
-        sb.AppendLine($"**Commits:** {commits.Count}");
-        sb.AppendLine($"**Date Range:** {commits.LastOrDefault()?.Date ?? "N/A"} to {commits.FirstOrDefault()?.Date ?? "N/A"}");
+        sb.Append("**Branch:** `")
+            .Append(featureBranch)
+            .Append("` (compared to `")
+            .Append(baseBranch)
+            .AppendLine("`)");
+        sb.Append("**Commits:** ").AppendLine(commits.Count.ToString(CultureInfo.InvariantCulture));
+        sb.Append("**Date Range:** ")
+            .Append(commits.LastOrDefault()?.Date ?? "N/A")
+            .Append(" to ")
+            .AppendLine(commits.FirstOrDefault()?.Date ?? "N/A");
         sb.AppendLine();
 
         if (format == "keepachangelog")
@@ -1001,7 +1170,11 @@ internal static partial class DeveloperTools
                 sb.AppendLine("### Added");
                 foreach (var commit in categorized.Added)
                 {
-                    sb.AppendLine($"- {CleanCommitMessage(commit.Message)} ({commit.Hash})");
+                    sb.Append("- ")
+                        .Append(CleanCommitMessage(commit.Message))
+                        .Append(" (")
+                        .Append(commit.Hash)
+                        .AppendLine(")");
                 }
                 sb.AppendLine();
             }
@@ -1011,7 +1184,11 @@ internal static partial class DeveloperTools
                 sb.AppendLine("### Changed");
                 foreach (var commit in categorized.Changed)
                 {
-                    sb.AppendLine($"- {CleanCommitMessage(commit.Message)} ({commit.Hash})");
+                    sb.Append("- ")
+                        .Append(CleanCommitMessage(commit.Message))
+                        .Append(" (")
+                        .Append(commit.Hash)
+                        .AppendLine(")");
                 }
                 sb.AppendLine();
             }
@@ -1021,7 +1198,11 @@ internal static partial class DeveloperTools
                 sb.AppendLine("### Fixed");
                 foreach (var commit in categorized.Fixed)
                 {
-                    sb.AppendLine($"- {CleanCommitMessage(commit.Message)} ({commit.Hash})");
+                    sb.Append("- ")
+                        .Append(CleanCommitMessage(commit.Message))
+                        .Append(" (")
+                        .Append(commit.Hash)
+                        .AppendLine(")");
                 }
                 sb.AppendLine();
             }
@@ -1031,7 +1212,11 @@ internal static partial class DeveloperTools
                 sb.AppendLine("### Deprecated");
                 foreach (var commit in categorized.Deprecated)
                 {
-                    sb.AppendLine($"- {CleanCommitMessage(commit.Message)} ({commit.Hash})");
+                    sb.Append("- ")
+                        .Append(CleanCommitMessage(commit.Message))
+                        .Append(" (")
+                        .Append(commit.Hash)
+                        .AppendLine(")");
                 }
                 sb.AppendLine();
             }
@@ -1041,7 +1226,11 @@ internal static partial class DeveloperTools
                 sb.AppendLine("### Removed");
                 foreach (var commit in categorized.Removed)
                 {
-                    sb.AppendLine($"- {CleanCommitMessage(commit.Message)} ({commit.Hash})");
+                    sb.Append("- ")
+                        .Append(CleanCommitMessage(commit.Message))
+                        .Append(" (")
+                        .Append(commit.Hash)
+                        .AppendLine(")");
                 }
                 sb.AppendLine();
             }
@@ -1051,7 +1240,11 @@ internal static partial class DeveloperTools
                 sb.AppendLine("### Security");
                 foreach (var commit in categorized.Security)
                 {
-                    sb.AppendLine($"- {CleanCommitMessage(commit.Message)} ({commit.Hash})");
+                    sb.Append("- ")
+                        .Append(CleanCommitMessage(commit.Message))
+                        .Append(" (")
+                        .Append(commit.Hash)
+                        .AppendLine(")");
                 }
                 sb.AppendLine();
             }
@@ -1061,7 +1254,11 @@ internal static partial class DeveloperTools
                 sb.AppendLine("### Other");
                 foreach (var commit in categorized.Other)
                 {
-                    sb.AppendLine($"- {CleanCommitMessage(commit.Message)} ({commit.Hash})");
+                    sb.Append("- ")
+                        .Append(CleanCommitMessage(commit.Message))
+                        .Append(" (")
+                        .Append(commit.Hash)
+                        .AppendLine(")");
                 }
                 sb.AppendLine();
             }
@@ -1073,7 +1270,12 @@ internal static partial class DeveloperTools
             sb.AppendLine();
             foreach (var commit in commits)
             {
-                sb.AppendLine($"- {commit.Message} ({commit.Hash}) - {commit.Author}");
+                sb.Append("- ")
+                    .Append(commit.Message)
+                    .Append(" (")
+                    .Append(commit.Hash)
+                    .Append(") - ")
+                    .AppendLine(commit.Author);
             }
         }
 
@@ -1092,27 +1294,47 @@ internal static partial class DeveloperTools
         {
             var msg = commit.Message.ToLowerInvariant();
 
-            if (msg.StartsWith("feat") || msg.Contains("add ") || msg.Contains("new "))
+            if (
+                msg.StartsWith("feat", StringComparison.Ordinal)
+                || msg.Contains("add ", StringComparison.Ordinal)
+                || msg.Contains("new ", StringComparison.Ordinal)
+            )
             {
                 result.Added.Add(commit);
             }
-            else if (msg.StartsWith("fix") || msg.Contains("bug") || msg.Contains("issue"))
+            else if (
+                msg.StartsWith("fix", StringComparison.Ordinal)
+                || msg.Contains("bug", StringComparison.Ordinal)
+                || msg.Contains("issue", StringComparison.Ordinal)
+            )
             {
                 result.Fixed.Add(commit);
             }
-            else if (msg.StartsWith("refactor") || msg.Contains("change") || msg.Contains("update") || msg.Contains("improve"))
+            else if (
+                msg.StartsWith("refactor", StringComparison.Ordinal)
+                || msg.Contains("change", StringComparison.Ordinal)
+                || msg.Contains("update", StringComparison.Ordinal)
+                || msg.Contains("improve", StringComparison.Ordinal)
+            )
             {
                 result.Changed.Add(commit);
             }
-            else if (msg.Contains("deprecat"))
+            else if (msg.Contains("deprecat", StringComparison.Ordinal))
             {
                 result.Deprecated.Add(commit);
             }
-            else if (msg.Contains("remove") || msg.Contains("delete"))
+            else if (
+                msg.Contains("remove", StringComparison.Ordinal)
+                || msg.Contains("delete", StringComparison.Ordinal)
+            )
             {
                 result.Removed.Add(commit);
             }
-            else if (msg.Contains("security") || msg.Contains("vulnerab") || msg.Contains("cve"))
+            else if (
+                msg.Contains("security", StringComparison.Ordinal)
+                || msg.Contains("vulnerab", StringComparison.Ordinal)
+                || msg.Contains("cve", StringComparison.Ordinal)
+            )
             {
                 result.Security.Add(commit);
             }
@@ -1132,12 +1354,15 @@ internal static partial class DeveloperTools
         // Capitalize first letter
         if (cleaned.Length > 0)
         {
-            cleaned = char.ToUpper(cleaned[0]) + cleaned[1..];
+            cleaned = char.ToUpperInvariant(cleaned[0]) + cleaned[1..];
         }
         return cleaned.Trim();
     }
 
-    [GeneratedRegex(@"^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert)(\([^)]+\))?:\s*", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(
+        @"^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert)(\([^)]+\))?:\s*",
+        RegexOptions.IgnoreCase
+    )]
     private static partial Regex ConventionalPrefixPattern();
 
     private record CommitInfo
@@ -1170,16 +1395,16 @@ internal static partial class DeveloperTools
 
         foreach (var line in diff.Split('\n'))
         {
-            if (line.StartsWith("+++ b/"))
+            if (line.StartsWith("+++ b/", StringComparison.Ordinal))
             {
                 currentFile = line[6..];
                 analysis.FilesChanged++;
             }
-            else if (line.StartsWith('+') && !line.StartsWith("+++"))
+            else if (line.StartsWith('+') && !line.StartsWith("+++", StringComparison.Ordinal))
             {
                 analysis.LinesAdded++;
             }
-            else if (line.StartsWith('-') && !line.StartsWith("---"))
+            else if (line.StartsWith('-') && !line.StartsWith("---", StringComparison.Ordinal))
             {
                 analysis.LinesRemoved++;
             }
@@ -1187,11 +1412,14 @@ internal static partial class DeveloperTools
 
         // Determine change type based on patterns
         var lowerDiff = diff.ToLowerInvariant();
-        if (lowerDiff.Contains("fix") || lowerDiff.Contains("bug"))
+        if (
+            lowerDiff.Contains("fix", StringComparison.Ordinal)
+            || lowerDiff.Contains("bug", StringComparison.Ordinal)
+        )
             analysis.ChangeType = "bug fix";
         else if (analysis.LinesRemoved > analysis.LinesAdded)
             analysis.ChangeType = "refactoring/cleanup";
-        else if (lowerDiff.Contains("test"))
+        else if (lowerDiff.Contains("test", StringComparison.Ordinal))
             analysis.ChangeType = "testing";
         else
             analysis.ChangeType = "feature/enhancement";

@@ -174,10 +174,10 @@ public void Validate(string input)
     private static bool IsTestFile(string path)
     {
         var lower = path.ToLowerInvariant();
-        return lower.Contains("test")
-            || lower.Contains("spec")
-            || lower.Contains("__tests__")
-            || lower.StartsWith("tests/");
+        return lower.Contains("test", StringComparison.Ordinal)
+            || lower.Contains("spec", StringComparison.Ordinal)
+            || lower.Contains("__tests__", StringComparison.Ordinal)
+            || lower.StartsWith("tests/", StringComparison.Ordinal);
     }
 
     private static bool IsConfigFile(string path)
@@ -196,9 +196,9 @@ public void Validate(string input)
             ".env",
         };
 
-        return configExtensions.Any(e => lower.EndsWith(e))
-                && configNames.Any(n => lower.Contains(n))
-            || lower.StartsWith(".") && !lower.Contains("/");
+        return configExtensions.Any(e => lower.EndsWith(e, StringComparison.Ordinal))
+                && configNames.Any(n => lower.Contains(n, StringComparison.Ordinal))
+            || lower.StartsWith('.') && !lower.Contains('/');
     }
 
     private static bool IsDocFile(string path)

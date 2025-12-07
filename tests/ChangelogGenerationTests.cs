@@ -129,10 +129,10 @@ public class ChangelogGenerationTests
 
         var changelog = FormatChangelog(entries);
 
-        var addedPos = changelog.IndexOf("### Added");
-        var changedPos = changelog.IndexOf("### Changed");
-        var fixedPos = changelog.IndexOf("### Fixed");
-        var securityPos = changelog.IndexOf("### Security");
+        var addedPos = changelog.IndexOf("### Added", StringComparison.Ordinal);
+        var changedPos = changelog.IndexOf("### Changed", StringComparison.Ordinal);
+        var fixedPos = changelog.IndexOf("### Fixed", StringComparison.Ordinal);
+        var securityPos = changelog.IndexOf("### Security", StringComparison.Ordinal);
 
         Assert.True(addedPos < changedPos, "Added should come before Changed");
         Assert.True(changedPos < fixedPos, "Changed should come before Fixed");
@@ -147,11 +147,11 @@ public class ChangelogGenerationTests
     {
         var lowerMessage = message.ToLowerInvariant();
 
-        if (lowerMessage.StartsWith("feat"))
+        if (lowerMessage.StartsWith("feat", StringComparison.Ordinal))
             return "Added";
-        if (lowerMessage.StartsWith("fix"))
+        if (lowerMessage.StartsWith("fix", StringComparison.Ordinal))
             return "Fixed";
-        if (lowerMessage.StartsWith("docs"))
+        if (lowerMessage.StartsWith("docs", StringComparison.Ordinal))
             return "Documentation";
 
         return "Changed";
@@ -160,14 +160,14 @@ public class ChangelogGenerationTests
     private static string CleanCommitMessage(string message)
     {
         // Remove conventional commit prefix like "feat:", "fix(scope):", etc.
-        var colonIndex = message.IndexOf(':');
+        var colonIndex = message.IndexOf(':', StringComparison.Ordinal);
         if (colonIndex > 0 && colonIndex < 20)
         {
             var afterColon = message[(colonIndex + 1)..].TrimStart();
             if (!string.IsNullOrEmpty(afterColon))
             {
                 // Capitalize first letter
-                return char.ToUpper(afterColon[0]) + afterColon[1..];
+                return char.ToUpperInvariant(afterColon[0]) + afterColon[1..];
             }
         }
         return message;
@@ -194,10 +194,10 @@ public class ChangelogGenerationTests
         {
             if (entries.TryGetValue(category, out var items) && items.Count > 0)
             {
-                sb.AppendLine($"### {category}");
+                sb.Append("### ").AppendLine(category);
                 foreach (var item in items)
                 {
-                    sb.AppendLine($"- {item}");
+                    sb.Append("- ").AppendLine(item);
                 }
                 sb.AppendLine();
             }

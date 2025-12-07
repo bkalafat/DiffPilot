@@ -1,3 +1,4 @@
+using System.Globalization;
 using Xunit;
 
 namespace DiffPilot.Tests;
@@ -174,8 +175,8 @@ public class DiffStatsParsingTests
         if (parts.Length != 3)
             return (0, 0, string.Empty);
 
-        var additions = parts[0] == "-" ? -1 : int.Parse(parts[0]);
-        var deletions = parts[1] == "-" ? -1 : int.Parse(parts[1]);
+        var additions = parts[0] == "-" ? -1 : int.Parse(parts[0], CultureInfo.InvariantCulture);
+        var deletions = parts[1] == "-" ? -1 : int.Parse(parts[1], CultureInfo.InvariantCulture);
 
         return (additions, deletions, parts[2]);
     }
@@ -232,7 +233,7 @@ public class DiffStatsParsingTests
         return result;
     }
 
-    private class DiffStats
+    private sealed class DiffStats
     {
         public int TotalAdditions { get; set; }
         public int TotalDeletions { get; set; }
@@ -241,7 +242,7 @@ public class DiffStatsParsingTests
         public int NetChange { get; set; }
     }
 
-    private class ExtensionStats
+    private sealed class ExtensionStats
     {
         public int FileCount { get; set; }
         public int Additions { get; set; }

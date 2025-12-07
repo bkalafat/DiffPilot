@@ -175,7 +175,7 @@ deleted file mode 100644
     
     private static string? DetectScope(string[] files)
     {
-        var scopes = new HashSet<string>();
+        var scopes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         
         foreach (var file in files)
         {
@@ -183,10 +183,10 @@ deleted file mode 100644
             if (parts.Length >= 2)
             {
                 // Get the first meaningful directory (skip 'src')
-                var scopeIndex = parts[0].ToLower() == "src" ? 1 : 0;
+                var scopeIndex = string.Equals(parts[0], "src", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
                 if (scopeIndex < parts.Length - 1)
                 {
-                    scopes.Add(parts[scopeIndex].ToLower());
+                    scopes.Add(parts[scopeIndex]);
                 }
             }
         }
@@ -196,20 +196,24 @@ deleted file mode 100644
     
     private static bool IsTestFile(string path)
     {
-        return path.Contains("test") || path.Contains("spec") || path.Contains("__tests__");
+        return path.Contains("test", StringComparison.OrdinalIgnoreCase) || 
+               path.Contains("spec", StringComparison.OrdinalIgnoreCase) || 
+               path.Contains("__tests__", StringComparison.OrdinalIgnoreCase);
     }
     
     private static bool IsDocFile(string path)
     {
-        return path.EndsWith(".md") || path.Contains("docs/") || 
-               path.Contains("readme") || path.Contains("changelog");
+        return path.EndsWith(".md", StringComparison.OrdinalIgnoreCase) || 
+               path.Contains("docs/", StringComparison.OrdinalIgnoreCase) || 
+               path.Contains("readme", StringComparison.OrdinalIgnoreCase) || 
+               path.Contains("changelog", StringComparison.OrdinalIgnoreCase);
     }
     
     private static bool IsConfigFile(string path)
     {
         var configPatterns = new[] { ".json", ".yaml", ".yml", ".config", ".gitignore", 
             ".github/", "package.json", "tsconfig" };
-        return configPatterns.Any(p => path.Contains(p));
+        return configPatterns.Any(p => path.Contains(p, StringComparison.OrdinalIgnoreCase));
     }
     
     #endregion

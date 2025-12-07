@@ -160,10 +160,10 @@ public class GitValidationTests
             return false;
 
         // Git branch name restrictions
-        if (name.StartsWith(".") || name.EndsWith("/") || name.StartsWith("/"))
+        if (name.StartsWith('.') || name.EndsWith('/') || name.StartsWith('/'))
             return false;
 
-        if (name.EndsWith(".lock"))
+        if (name.EndsWith(".lock", StringComparison.Ordinal))
             return false;
 
         // Invalid characters
@@ -172,7 +172,7 @@ public class GitValidationTests
             return false;
 
         // No consecutive dots
-        if (name.Contains(".."))
+        if (name.Contains("..", StringComparison.Ordinal))
             return false;
 
         return true;
@@ -194,7 +194,7 @@ public class GitValidationTests
         if (path.Contains('\0'))
             return false;
 
-        if (path.Contains("//"))
+        if (path.Contains("//", StringComparison.Ordinal))
             return false;
 
         return true;
@@ -206,11 +206,11 @@ public class GitValidationTests
             return false;
 
         // SSH format
-        if (url.StartsWith("git@") && url.Contains(":"))
+        if (url.StartsWith("git@", StringComparison.Ordinal) && url.Contains(':'))
             return true;
 
         // HTTPS format (require https, not http)
-        if (url.StartsWith("https://"))
+        if (url.StartsWith("https://", StringComparison.Ordinal))
             return true;
 
         return false;
@@ -221,7 +221,7 @@ public class GitValidationTests
         var prefixes = new[] { "origin/", "upstream/", "remote/" };
         foreach (var prefix in prefixes)
         {
-            if (branch.StartsWith(prefix))
+            if (branch.StartsWith(prefix, StringComparison.Ordinal))
                 return branch[prefix.Length..];
         }
         return branch;

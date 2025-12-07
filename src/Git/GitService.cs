@@ -4,7 +4,7 @@
 // Centralized git operations for the MCP server.
 // All git commands are executed via this service to ensure consistent handling.
 // Validation helpers prevent shell injection by restricting allowed characters.
-// 
+//
 // Base branch detection strategy (in order of reliability):
 // 1. Reflog - "Created from X" entry (most reliable)
 // 2. Git config - upstream tracking branch
@@ -92,7 +92,13 @@ internal static partial class GitService
         }
         catch (OperationCanceledException)
         {
-            try { process.Kill(entireProcessTree: true); } catch { /* ignore kill errors */ }
+            try
+            {
+                process.Kill(entireProcessTree: true);
+            }
+            catch
+            { /* ignore kill errors */
+            }
             return (-1, $"Git command timed out after {timeoutSeconds} seconds: git {arguments}");
         }
 
@@ -118,9 +124,9 @@ internal static partial class GitService
     /// Finds the base branch that the current branch was created from.
     /// Uses multiple detection strategies in order of reliability:
     /// 1. Reflog - "Created from X" entry
-    /// 2. Git config - upstream tracking branch  
+    /// 2. Git config - upstream tracking branch
     /// 3. Merge-base analysis - unique common ancestor
-    /// 
+    ///
     /// Does NOT guess or use hardcoded branch names. Returns null if uncertain.
     /// </summary>
     /// <param name="workingDirectory">The repository directory.</param>
@@ -140,7 +146,8 @@ internal static partial class GitService
         var reflogBase = await FindFromReflogAsync(workingDirectory, currentBranch);
         if (reflogBase != null)
         {
-            var branchRemote = await FindRemoteForBranchAsync(workingDirectory, reflogBase) ?? remote;
+            var branchRemote =
+                await FindRemoteForBranchAsync(workingDirectory, reflogBase) ?? remote;
             return (branchRemote, reflogBase);
         }
 
@@ -148,12 +155,17 @@ internal static partial class GitService
         var trackingBase = await FindFromTrackingConfigAsync(workingDirectory, currentBranch);
         if (trackingBase != null && trackingBase != currentBranch)
         {
-            var branchRemote = await GetBranchRemoteAsync(workingDirectory, currentBranch) ?? remote;
+            var branchRemote =
+                await GetBranchRemoteAsync(workingDirectory, currentBranch) ?? remote;
             return (branchRemote, trackingBase);
         }
 
         // 3️⃣ MERGE-BASE - Unique common ancestor with local/remote branches
-        var mergeBaseResult = await FindFromUniqueMergeBaseAsync(workingDirectory, currentBranch, remote);
+        var mergeBaseResult = await FindFromUniqueMergeBaseAsync(
+            workingDirectory,
+            currentBranch,
+            remote
+        );
         if (mergeBaseResult != null)
         {
             return mergeBaseResult;
@@ -167,9 +179,15 @@ internal static partial class GitService
     /// Searches reflog for "Created from X" record.
     /// This is the most reliable method as it shows the actual branch creation source.
     /// </summary>
-    private static async Task<string?> FindFromReflogAsync(string workingDirectory, string currentBranch)
+    private static async Task<string?> FindFromReflogAsync(
+        string workingDirectory,
+        string currentBranch
+    )
     {
-        var result = await RunGitCommandAsync($"reflog show {currentBranch} --format=%gs", workingDirectory);
+        var result = await RunGitCommandAsync(
+            $"reflog show {currentBranch} --format=%gs",
+            workingDirectory
+        );
         if (result.ExitCode != 0 || string.IsNullOrWhiteSpace(result.Output))
             return null;
 
@@ -185,7 +203,10 @@ internal static partial class GitService
                 var source = match.Groups[1].Value;
 
                 // Skip if HEAD or commit hash (not definitive)
-                if (source.Equals("HEAD", StringComparison.OrdinalIgnoreCase) || IsCommitHash(source))
+                if (
+                    source.Equals("HEAD", StringComparison.OrdinalIgnoreCase)
+                    || IsCommitHash(source)
+                )
                     continue;
 
                 // "origin/main" -> "main"
@@ -213,16 +234,22 @@ internal static partial class GitService
     /// <summary>
     /// Reads upstream tracking branch from git config.
     /// </summary>
-    private static async Task<string?> FindFromTrackingConfigAsync(string workingDirectory, string branch)
+    private static async Task<string?> FindFromTrackingConfigAsync(
+        string workingDirectory,
+        string branch
+    )
     {
-        var result = await RunGitCommandAsync($"config --get branch.{branch}.merge", workingDirectory);
+        var result = await RunGitCommandAsync(
+            $"config --get branch.{branch}.merge",
+            workingDirectory
+        );
         if (result.ExitCode != 0 || string.IsNullOrWhiteSpace(result.Output))
             return null;
 
         var trackingRef = result.Output.Trim();
 
         // "refs/heads/main" -> "main"
-        if (trackingRef.StartsWith("refs/heads/"))
+        if (trackingRef.StartsWith("refs/heads/", StringComparison.Ordinal))
             return trackingRef["refs/heads/".Length..];
 
         return trackingRef;
@@ -235,14 +262,18 @@ internal static partial class GitService
     private static async Task<(string Remote, string BaseBranch)?> FindFromUniqueMergeBaseAsync(
         string workingDirectory,
         string currentBranch,
-        string remote)
+        string remote
+    )
     {
         // Get all local and remote branches
         var localBranches = await GetLocalBranchesAsync(workingDirectory, currentBranch);
         var remoteBranches = await GetRemoteBranchesAsync(workingDirectory, remote);
 
         // Get current branch HEAD
-        var currentHeadResult = await RunGitCommandAsync($"rev-parse {currentBranch}", workingDirectory);
+        var currentHeadResult = await RunGitCommandAsync(
+            $"rev-parse {currentBranch}",
+            workingDirectory
+        );
         if (currentHeadResult.ExitCode != 0)
             return null;
 
@@ -278,17 +309,26 @@ internal static partial class GitService
             else
             {
                 // Multiple candidates - check if one is parent of the other
-                var isNewCandidateChildOfPrevious = await IsBranchAheadAsync(workingDirectory, branch, uniqueBase!);
+                var isNewCandidateChildOfPrevious = await IsBranchAheadAsync(
+                    workingDirectory,
+                    branch,
+                    uniqueBase!
+                );
                 if (isNewCandidateChildOfPrevious)
                 {
                     // New candidate is child of previous -> use new (more specific)
                     uniqueBase = branch;
-                    uniqueRemote = await FindRemoteForBranchAsync(workingDirectory, branch) ?? remote;
+                    uniqueRemote =
+                        await FindRemoteForBranchAsync(workingDirectory, branch) ?? remote;
                     candidateCount = 1;
                 }
                 else
                 {
-                    var isPreviousChildOfNewCandidate = await IsBranchAheadAsync(workingDirectory, uniqueBase!, branch);
+                    var isPreviousChildOfNewCandidate = await IsBranchAheadAsync(
+                        workingDirectory,
+                        uniqueBase!,
+                        branch
+                    );
                     if (isPreviousChildOfNewCandidate)
                     {
                         // Previous is more specific, keep it
@@ -325,7 +365,11 @@ internal static partial class GitService
             {
                 // Multiple candidates with remote - apply same parent/child logic
                 var remoteUniqueRef = $"{uniqueRemote}/{uniqueBase}";
-                var isNewCandidateChildOfPrevious = await IsBranchAheadAsync(workingDirectory, remoteRef, remoteUniqueRef);
+                var isNewCandidateChildOfPrevious = await IsBranchAheadAsync(
+                    workingDirectory,
+                    remoteRef,
+                    remoteUniqueRef
+                );
                 if (isNewCandidateChildOfPrevious)
                 {
                     uniqueBase = branch;
@@ -334,7 +378,11 @@ internal static partial class GitService
                 }
                 else
                 {
-                    var isPreviousChildOfNewCandidate = await IsBranchAheadAsync(workingDirectory, remoteUniqueRef, remoteRef);
+                    var isPreviousChildOfNewCandidate = await IsBranchAheadAsync(
+                        workingDirectory,
+                        remoteUniqueRef,
+                        remoteRef
+                    );
                     if (isPreviousChildOfNewCandidate)
                     {
                         candidateCount = 1;
@@ -355,7 +403,11 @@ internal static partial class GitService
     /// <summary>
     /// Gets the merge-base (common ancestor) between two branches.
     /// </summary>
-    private static async Task<string?> GetMergeBaseAsync(string workingDirectory, string branch1, string branch2)
+    private static async Task<string?> GetMergeBaseAsync(
+        string workingDirectory,
+        string branch1,
+        string branch2
+    )
     {
         var result = await RunGitCommandAsync($"merge-base {branch1} {branch2}", workingDirectory);
         return result.ExitCode == 0 ? result.Output.Trim() : null;
@@ -364,25 +416,38 @@ internal static partial class GitService
     /// <summary>
     /// Checks if branch is ahead of baseBranch (has commits that baseBranch doesn't have).
     /// </summary>
-    private static async Task<bool> IsBranchAheadAsync(string workingDirectory, string branch, string baseBranch)
+    private static async Task<bool> IsBranchAheadAsync(
+        string workingDirectory,
+        string branch,
+        string baseBranch
+    )
     {
-        var result = await RunGitCommandAsync($"rev-list --count {baseBranch}..{branch}", workingDirectory);
-        return result.ExitCode == 0 &&
-               int.TryParse(result.Output.Trim(), out int ahead) &&
-               ahead > 0;
+        var result = await RunGitCommandAsync(
+            $"rev-list --count {baseBranch}..{branch}",
+            workingDirectory
+        );
+        return result.ExitCode == 0
+            && int.TryParse(result.Output.Trim(), out int ahead)
+            && ahead > 0;
     }
 
     /// <summary>
     /// Gets all local branches except the specified one.
     /// </summary>
-    private static async Task<string[]> GetLocalBranchesAsync(string workingDirectory, string excludeBranch)
+    private static async Task<string[]> GetLocalBranchesAsync(
+        string workingDirectory,
+        string excludeBranch
+    )
     {
-        var result = await RunGitCommandAsync("branch --list --format=%(refname:short)", workingDirectory);
+        var result = await RunGitCommandAsync(
+            "branch --list --format=%(refname:short)",
+            workingDirectory
+        );
         if (result.ExitCode != 0)
             return [];
 
-        return result.Output
-            .Split('\n', StringSplitOptions.RemoveEmptyEntries)
+        return result
+            .Output.Split('\n', StringSplitOptions.RemoveEmptyEntries)
             .Select(b => b.Trim())
             .Where(b => b != excludeBranch && !string.IsNullOrWhiteSpace(b))
             .ToArray();
@@ -391,18 +456,24 @@ internal static partial class GitService
     /// <summary>
     /// Gets all remote branches for the specified remote.
     /// </summary>
-    private static async Task<string[]> GetRemoteBranchesAsync(string workingDirectory, string remote)
+    private static async Task<string[]> GetRemoteBranchesAsync(
+        string workingDirectory,
+        string remote
+    )
     {
-        var result = await RunGitCommandAsync($"branch -r --list \"{remote}/*\" --format=%(refname:short)", workingDirectory);
+        var result = await RunGitCommandAsync(
+            $"branch -r --list \"{remote}/*\" --format=%(refname:short)",
+            workingDirectory
+        );
         if (result.ExitCode != 0)
             return [];
 
         var prefix = $"{remote}/";
-        return result.Output
-            .Split('\n', StringSplitOptions.RemoveEmptyEntries)
+        return result
+            .Output.Split('\n', StringSplitOptions.RemoveEmptyEntries)
             .Select(b => b.Trim())
             .Where(b => !b.Contains("->")) // Skip HEAD pointer
-            .Select(b => b.StartsWith(prefix) ? b[prefix.Length..] : b)
+            .Select(b => b.StartsWith(prefix, StringComparison.Ordinal) ? b[prefix.Length..] : b)
             .Where(b => !string.IsNullOrWhiteSpace(b))
             .ToArray();
     }
@@ -412,14 +483,20 @@ internal static partial class GitService
     /// </summary>
     private static async Task<string?> GetBranchRemoteAsync(string workingDirectory, string branch)
     {
-        var result = await RunGitCommandAsync($"config --get branch.{branch}.remote", workingDirectory);
+        var result = await RunGitCommandAsync(
+            $"config --get branch.{branch}.remote",
+            workingDirectory
+        );
         return result.ExitCode == 0 ? result.Output.Trim() : null;
     }
 
     /// <summary>
     /// Finds which remote contains the specified branch.
     /// </summary>
-    private static async Task<string?> FindRemoteForBranchAsync(string workingDirectory, string branch)
+    private static async Task<string?> FindRemoteForBranchAsync(
+        string workingDirectory,
+        string branch
+    )
     {
         // First check config
         var configRemote = await GetBranchRemoteAsync(workingDirectory, branch);
@@ -431,12 +508,18 @@ internal static partial class GitService
         if (remotesResult.ExitCode != 0)
             return null;
 
-        foreach (var remoteLine in remotesResult.Output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        foreach (
+            var remoteLine in remotesResult.Output.Split(
+                '\n',
+                StringSplitOptions.RemoveEmptyEntries
+            )
+        )
         {
             var remoteName = remoteLine.Trim();
             var checkResult = await RunGitCommandAsync(
                 $"show-ref --verify --quiet refs/remotes/{remoteName}/{branch}",
-                workingDirectory);
+                workingDirectory
+            );
 
             if (checkResult.ExitCode == 0)
                 return remoteName;
@@ -452,7 +535,9 @@ internal static partial class GitService
     {
         if (string.IsNullOrWhiteSpace(value) || value.Length < 7 || value.Length > 40)
             return false;
-        return value.All(c => (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'));
+        return value.All(c =>
+            (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')
+        );
     }
 
     /// <summary>

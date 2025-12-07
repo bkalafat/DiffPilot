@@ -12,6 +12,9 @@
     
     <!-- Relax some warnings for test code -->
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    
+    <!-- CA1707: xUnit naming convention uses underscores for test method names (MethodName_Scenario_ExpectedBehavior) -->
+    <NoWarn>$(NoWarn);CA1707</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

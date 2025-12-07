@@ -11,6 +11,7 @@
 // NO FILES ARE CREATED - all output is returned directly to avoid repo pollution.
 // ============================================================================
 
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -123,7 +124,7 @@ internal static partial class PrReviewTools
         var sb = new StringBuilder();
         sb.AppendLine("# Code Review Request");
         sb.AppendLine();
-        sb.AppendLine($"**Branch:** `{featureBranch}` → `{baseBranch}`");
+        sb.Append("**Branch:** `").Append(featureBranch).Append("` → `").Append(baseBranch).AppendLine("`");
         sb.AppendLine();
 
         if (statsResult.ExitCode == 0 && !string.IsNullOrWhiteSpace(statsResult.Output))
@@ -148,7 +149,7 @@ internal static partial class PrReviewTools
 
         if (!string.IsNullOrWhiteSpace(focusAreas))
         {
-            sb.AppendLine($"**Focus Areas:** {focusAreas}");
+            sb.Append("**Focus Areas:** ").AppendLine(focusAreas);
             sb.AppendLine();
         }
 
@@ -226,11 +227,11 @@ internal static partial class PrReviewTools
         var sb = new StringBuilder();
         sb.AppendLine("# PR Title Generator");
         sb.AppendLine();
-        sb.AppendLine($"**Branch:** `{featureBranch}`");
-        sb.AppendLine($"**Style:** {style}");
+        sb.Append("**Branch:** `").Append(featureBranch).AppendLine("`");
+        sb.Append("**Style:** ").AppendLine(style);
         if (ticketNumber != null)
         {
-            sb.AppendLine($"**Ticket:** {ticketNumber}");
+            sb.Append("**Ticket:** ").AppendLine(ticketNumber);
         }
         sb.AppendLine();
 
@@ -265,7 +266,7 @@ internal static partial class PrReviewTools
                 break;
 
             case "ticket":
-                sb.AppendLine($"**Format:** `[{ticketNumber ?? "TICKET-XXX"}] Description`");
+                sb.Append("**Format:** `[").Append(ticketNumber ?? "TICKET-XXX").AppendLine("] Description`");
                 sb.AppendLine();
                 sb.AppendLine("Examples:");
                 sb.AppendLine("- `[PROJ-123] Add user authentication flow`");
@@ -360,10 +361,10 @@ internal static partial class PrReviewTools
         var sb = new StringBuilder();
         sb.AppendLine("# PR Description Generator");
         sb.AppendLine();
-        sb.AppendLine($"**Branch:** `{featureBranch}` → `{baseBranch}`");
+        sb.Append("**Branch:** `").Append(featureBranch).Append("` → `").Append(baseBranch).AppendLine("`");
         if (ticketNumber != null)
         {
-            sb.AppendLine($"**Ticket:** {ticketNumber}");
+            sb.Append("**Ticket:** ").AppendLine(ticketNumber);
         }
         sb.AppendLine();
 
@@ -399,13 +400,13 @@ internal static partial class PrReviewTools
         if (!string.IsNullOrEmpty(ticketUrl))
         {
             sb.AppendLine("## Related Issue");
-            sb.AppendLine($"[{ticketNumber ?? "Ticket"}]({ticketUrl})");
+            sb.Append('[').Append(ticketNumber ?? "Ticket").Append("](").Append(ticketUrl).Append(')').AppendLine();
             sb.AppendLine();
         }
         else if (ticketNumber != null)
         {
             sb.AppendLine("## Related Issue");
-            sb.AppendLine($"{ticketNumber}");
+            sb.AppendLine(ticketNumber);
             sb.AppendLine();
         }
 

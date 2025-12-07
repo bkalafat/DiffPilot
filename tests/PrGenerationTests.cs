@@ -176,7 +176,7 @@ public class PrGenerationTests
         sb.AppendLine("## Changes");
         foreach (var change in changes)
         {
-            sb.AppendLine($"- {change}");
+            sb.Append("- ").AppendLine(change);
         }
         sb.AppendLine();
         
@@ -206,7 +206,7 @@ public class PrGenerationTests
         sb.AppendLine("## Changes");
         foreach (var change in changes)
         {
-            sb.AppendLine($"- {change}");
+            sb.Append("- ").AppendLine(change);
         }
         
         return sb.ToString();

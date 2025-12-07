@@ -1,39 +1,34 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <!-- ============================================================================
        DiffPilot.csproj
        ============================================================================
        MCP (Model Context Protocol) server for PR code review and developer tools.
        Communicates via JSON-RPC 2.0 over stdio transport.
        ============================================================================ -->
-
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <AssemblyName>DiffPilot</AssemblyName>
     <RootNamespace>DiffPilot</RootNamespace>
     <Description>MCP server for PR code review and developer productivity tools</Description>
     <PackageTags>mcp;model-context-protocol;git;pr-review;developer-tools</PackageTags>
-
     <!-- Tool manifest for dotnet tool install -->
     <PackAsTool>false</PackAsTool>
-
     <!-- Disable AOT - this project uses reflection-based JSON serialization -->
     <IsAotCompatible>false</IsAotCompatible>
-
     <!-- Suppress culture-specific warnings (output is for AI consumption, not locale-dependent) -->
     <NoWarn>$(NoWarn);CA1305;CA1304;CA1310;CA1311</NoWarn>
   </PropertyGroup>
-
-  <!-- Exclude test projects from main compilation -->
+  <!-- Exclude test projects and vscode-extension from main compilation -->
   <ItemGroup>
     <Compile Remove="tests\**" />
     <None Remove="tests\**" />
     <EmbeddedResource Remove="tests\**" />
+    <Compile Remove="vscode-extension\**" />
+    <None Remove="vscode-extension\**" />
+    <EmbeddedResource Remove="vscode-extension\**" />
   </ItemGroup>
-
   <!-- InternalsVisibleTo for testing -->
   <ItemGroup>
     <InternalsVisibleTo Include="DiffPilot.Tests" />
   </ItemGroup>
-
 </Project>
