@@ -44,19 +44,23 @@ async function activate(context) {
     // Initialize MCP client
     client = new client_1.DiffPilotClient(context);
     // Register MCP server definition provider for @mcp discovery
+    const didChangeEmitter = new vscode.EventEmitter();
     const mcpProvider = vscode.lm.registerMcpServerDefinitionProvider('diffpilot', {
-        provideMcpServerDefinitions: () => {
+        onDidChangeMcpServerDefinitions: didChangeEmitter.event,
+        provideMcpServerDefinitions: async () => {
             const config = vscode.workspace.getConfiguration('diffpilot');
             const customServerPath = config.get('serverPath');
             const dotnetPath = config.get('dotnetPath') || 'dotnet';
             // Use bundled server or custom path
             const serverPath = customServerPath || path.join(context.extensionPath, 'server');
-            // Create MCP server definition using constructor
-            const serverDef = new vscode.McpStdioServerDefinition('DiffPilot', dotnetPath, ['run', '--project', serverPath]);
+            // Create MCP server definition using constructor with all required parameters
+            const serverDef = new vscode.McpStdioServerDefinition('DiffPilot', dotnetPath, ['run', '--project', serverPath], {} // environment variables
+            );
             return [serverDef];
         }
     });
     context.subscriptions.push(mcpProvider);
+    context.subscriptions.push(didChangeEmitter);
     // Register commands
     const commands = [
         { id: 'diffpilot.getPrDiff', handler: () => client?.callTool('get_pr_diff') },

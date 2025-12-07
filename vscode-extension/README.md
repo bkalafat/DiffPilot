@@ -1,117 +1,68 @@
 # DiffPilot - MCP Server for Code Review
 
-**Model Context Protocol (MCP) Server** for AI-powered PR code review and developer productivity tools.
+<!-- mcp-name: io.github.bkalafat/diffpilot -->
+
+**Model Context Protocol (MCP) Server** for AI-powered PR code review and developer productivity.
 
 > 🔌 **MCP Compatible** - Works with GitHub Copilot, Claude, and other MCP-enabled AI assistants
 
 ## 🏢 On-Premise & Enterprise Ready
 
-DiffPilot runs **100% locally** on your machine - no cloud services, no external API calls, no data leaves your network.
+DiffPilot runs **100% locally** - no cloud services, no external API calls, no data leaves your network.
 
-✅ **Air-Gapped Environments** - Works in isolated networks  
-✅ **Azure DevOps Server / TFS** - Full compatibility with on-premise Git  
-✅ **Banking & Financial** - Meets strict data residency requirements  
-✅ **Government & Defense** - No external dependencies  
-✅ **GDPR Compliant** - Your code never leaves your infrastructure  
+✅ Air-Gapped Environments | ✅ Azure DevOps Server / TFS | ✅ Banking & Financial | ✅ GDPR Compliant
 
-> **Perfect for organizations using on-premise Azure DevOps, TFS, or any local Git server.**
+## MCP Tools
 
-## Features
-
-🔍 **PR Review Tools**
-- **Get PR Diff** - Fetch diff between branches
-- **Review PR Changes** - AI-powered code review
-- **Generate PR Title** - Conventional commit format titles
-- **Generate PR Description** - Complete PR descriptions with checklist
-
-🚀 **Developer Productivity**
-- **Generate Commit Message** - Smart commit messages from changes
-- **Scan for Secrets** - Detect API keys, passwords, tokens
-- **Diff Statistics** - Detailed change metrics
-- **Suggest Tests** - AI-recommended test cases
-- **Generate Changelog** - Automatic changelog from commits
+| Tool | Command | Description |
+|------|---------|-------------|
+| `get_pr_diff` | `DiffPilot: Get PR Diff` | Fetches raw diff between base and feature branches |
+| `review_pr_changes` | `DiffPilot: Review PR Changes` | Gets diff with AI review instructions for code review |
+| `generate_pr_title` | `DiffPilot: Generate PR Title` | Generates conventional PR title from changes |
+| `generate_pr_description` | `DiffPilot: Generate PR Description` | Creates PR description with summary, changes, and checklist |
+| `generate_commit_message` | `DiffPilot: Generate Commit Message` | Generates commit message from staged/unstaged changes |
+| `scan_secrets` | `DiffPilot: Scan for Secrets` | Detects API keys, passwords, tokens in changes |
+| `diff_stats` | `DiffPilot: Get Diff Statistics` | Returns lines added/removed, files changed by type |
+| `suggest_tests` | `DiffPilot: Suggest Tests` | Analyzes changes and recommends test cases |
+| `generate_changelog` | `DiffPilot: Generate Changelog` | Generates changelog entries from commits |
 
 ## Requirements
 
-- [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0) or later
-- Git installed and accessible
+- [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
+- Git installed
 
 ## Installation
 
-1. Install the extension from VS Code Marketplace
+1. Install from VS Code Marketplace
 2. Open a Git repository
-3. Use Command Palette (`Ctrl+Shift+P`) and type "DiffPilot"
+3. Extension auto-registers as MCP server - ready to use with Copilot Agent mode
 
-## Usage
+## Settings
 
-### Command Palette
-Press `Ctrl+Shift+P` and type any DiffPilot command:
-- `DiffPilot: Get PR Diff`
-- `DiffPilot: Review PR Changes`
-- `DiffPilot: Generate PR Title`
-- `DiffPilot: Generate PR Description`
-- `DiffPilot: Generate Commit Message`
-- `DiffPilot: Scan for Secrets`
-- `DiffPilot: Get Diff Statistics`
-- `DiffPilot: Suggest Tests`
-- `DiffPilot: Generate Changelog`
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `diffpilot.dotnetPath` | `dotnet` | Path to dotnet executable |
+| `diffpilot.defaultBaseBranch` | `main` | Default base branch for comparisons |
+| `diffpilot.prTitleStyle` | `conventional` | PR title style: conventional, descriptive, ticket |
+| `diffpilot.commitMessageStyle` | `conventional` | Commit message style: conventional, simple |
+| `diffpilot.includeChecklist` | `true` | Include checklist in PR descriptions |
 
-### SCM Integration
-Right-click in the Source Control panel to access:
-- Generate Commit Message
-- Scan for Secrets
+## Security Scanning
 
-## Extension Settings
+Detects: 🔑 API Keys (AWS, GitHub, Slack) | 🔐 Private Keys | 🔒 Passwords | 🎫 Tokens (JWT, Bearer, Azure)
 
-| Setting | Description | Default |
-|---------|-------------|---------|
-| `diffpilot.dotnetPath` | Path to dotnet executable | `dotnet` |
-| `diffpilot.serverPath` | Path to DiffPilot server | (bundled) |
-| `diffpilot.defaultBaseBranch` | Default base branch | `main` |
-| `diffpilot.prTitleStyle` | PR title style | `conventional` |
-| `diffpilot.commitMessageStyle` | Commit message style | `conventional` |
-| `diffpilot.includeChecklist` | Include PR checklist | `true` |
-| `diffpilot.scanOnSave` | Auto-scan for secrets | `false` |
+## Changelog
 
-## Security Features
+### 1.0.6
+- **Fixed**: MCP server auto-registration for VS Code 1.101+
+- **Updated**: Minimum VS Code version to 1.101.0
 
-DiffPilot scans for:
-- 🔑 API Keys (AWS, GitHub, Slack)
-- 🔐 Private Keys (RSA, DSA, EC, OpenSSH)
-- 🔒 Passwords in URLs and variables
-- 🎫 Tokens (Bearer, JWT, Azure)
-
-## Known Issues
-
-- Requires .NET 9 SDK installed
-- Some features require an active Git repository
-
-## Why On-Premise Matters
-
-Many enterprises, especially in **banking, finance, and government sectors**, cannot use cloud-based tools due to:
-
-- **Regulatory Compliance** - Data must stay within national borders
-- **Security Policies** - No code or metadata can leave the network
-- **Air-Gapped Systems** - No internet connectivity allowed
-
-DiffPilot solves this by running entirely on your local machine. The MCP server processes everything locally, and the AI features work with your locally-hosted models or approved AI endpoints.
-
-## Release Notes
+### 1.0.5
+- Published to NuGet and MCP Registry
 
 ### 1.0.0
-- Initial release
-- 9 PR and developer tools
-- Secret scanning
-- Conventional commit support
-
-## Contributing
-
-Found a bug or have a feature request? [Open an issue](https://github.com/bkalafat/DiffPilot/issues) on GitHub.
+- Initial release with 9 MCP tools
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
-
----
-
-**Made with ❤️ by [Burak Kalafat](https://github.com/bkalafat)**
+MIT - [Burak Kalafat](https://github.com/bkalafat)
