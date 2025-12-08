@@ -1,153 +1,139 @@
 # MCP Tools Reference
 
-DiffPilot provides 9 MCP tools for PR review and developer productivity.
+DiffPilot provides 9 MCP tools. **Auto branch detection** - no need to specify base branch.
+
+---
 
 ## PR Review Tools
 
-### get_pr_diff
+### #get_pr_diff
+Get raw diff between branches.
 
-Fetches the raw diff between base branch and current/feature branch.
+```
+@workspace #get_pr_diff
+```
 
-**Command**: `DiffPilot: Get PR Diff`
-
-**Parameters**:
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `baseBranch` | string | No | Base branch (default: auto-detected or 'main') |
-| `featureBranch` | string | No | Feature branch (default: current branch) |
-| `remote` | string | No | Git remote (default: 'origin') |
-
-**Example prompt**: "Get the diff between main and my current branch"
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `baseBranch` | auto-detected | Base branch (main/master/develop) |
+| `featureBranch` | current branch | Feature branch to compare |
 
 ---
 
-### review_pr_changes
+### #review_pr_changes
+**Most used tool.** AI-powered code review on your local changes.
 
-Gets the PR diff with AI review instructions for code review.
+```
+@workspace #review_pr_changes
+@workspace #review_pr_changes focus on security and performance
+```
 
-**Command**: `DiffPilot: Review PR Changes`
-
-**Parameters**:
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `baseBranch` | string | No | Base branch for comparison |
-| `focusAreas` | string | No | Focus areas like 'security, performance, error handling' |
-
-**Example prompt**: "Review my PR changes focusing on security"
-
----
-
-### generate_pr_title
-
-Generates a conventional PR title from changes.
-
-**Command**: `DiffPilot: Generate PR Title`
-
-**Parameters**:
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `baseBranch` | string | No | Base branch for comparison |
-| `style` | string | No | Style: 'conventional', 'descriptive', or 'ticket' |
-
-**Example prompt**: "Generate a PR title for my changes"
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `baseBranch` | auto-detected | Base branch |
+| `focusAreas` | - | Focus areas: security, performance, error handling |
 
 ---
 
-### generate_pr_description
+### #generate_pr_title
+Generate conventional PR title from changes.
 
-Generates a complete PR description with summary, changes, and checklist.
+```
+@workspace #generate_pr_title
+```
 
-**Command**: `DiffPilot: Generate PR Description`
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `baseBranch` | auto-detected | Base branch |
+| `style` | conventional | Style: conventional, descriptive, ticket |
 
-**Parameters**:
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `baseBranch` | string | No | Base branch for comparison |
-| `ticketUrl` | string | No | Optional ticket/issue URL to include |
-| `includeChecklist` | boolean | No | Include PR checklist (default: true) |
+---
 
-**Example prompt**: "Generate a PR description for this feature"
+### #generate_pr_description
+Generate complete PR description with checklist.
+
+```
+@workspace #generate_pr_description
+```
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `baseBranch` | auto-detected | Base branch |
+| `ticketUrl` | - | Optional ticket/issue URL |
+| `includeChecklist` | true | Include PR checklist |
 
 ---
 
 ## Developer Productivity Tools
 
-### generate_commit_message
+### #generate_commit_message
+Generate commit message from staged/unstaged changes.
 
-Generates commit message from staged or unstaged changes.
+```
+@workspace #generate_commit_message
+```
 
-**Command**: `DiffPilot: Generate Commit Message`
-
-**Parameters**:
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `style` | string | No | Style: 'conventional' or 'simple' |
-| `scope` | string | No | Scope for conventional commits (e.g., 'api', 'ui') |
-| `includeBody` | boolean | No | Include body section (default: true) |
-
-**Example prompt**: "Generate a commit message for my staged changes"
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `style` | conventional | Style: conventional, simple |
+| `scope` | - | Scope for conventional commits (api, ui) |
+| `includeBody` | true | Include body section |
 
 ---
 
-### scan_secrets
+### #scan_secrets
+**Run before every commit!** Detect secrets, API keys, passwords.
 
-Scans changes for accidentally committed secrets, API keys, passwords, and tokens.
+```
+@workspace #scan_secrets
+```
 
-**Command**: `DiffPilot: Scan for Secrets`
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `scanStaged` | true | Scan staged changes |
+| `scanUnstaged` | true | Scan unstaged changes |
 
-**Parameters**:
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `scanStaged` | boolean | No | Scan staged changes (default: true) |
-| `scanUnstaged` | boolean | No | Scan unstaged changes (default: true) |
-
-**Example prompt**: "Scan my changes for any secrets or API keys"
-
----
-
-### diff_stats
-
-Gets detailed statistics about changes: lines added/removed, files changed, breakdown by file type.
-
-**Command**: `DiffPilot: Get Diff Statistics`
-
-**Parameters**:
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `baseBranch` | string | No | Base branch for comparison |
-| `featureBranch` | string | No | Feature branch for comparison |
-| `includeWorkingDir` | boolean | No | Include working directory stats (default: true) |
-
-**Example prompt**: "Show me statistics about my changes"
+**Detects:** AWS keys, GitHub tokens, passwords, JWT, Bearer tokens, Azure connection strings
 
 ---
 
-### suggest_tests
+### #diff_stats
+Get change statistics and breakdown.
 
-Analyzes changed code and suggests appropriate test cases.
+```
+@workspace #diff_stats
+```
 
-**Command**: `DiffPilot: Suggest Tests`
-
-**Parameters**:
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `baseBranch` | string | No | Base branch for comparison |
-
-**Example prompt**: "What tests should I write for these changes?"
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `baseBranch` | auto-detected | Base branch |
+| `featureBranch` | current branch | Feature branch |
+| `includeWorkingDir` | true | Include working directory stats |
 
 ---
 
-### generate_changelog
+### #suggest_tests
+Suggest tests for changed code.
 
-Generates changelog entries from commits between branches.
+```
+@workspace #suggest_tests
+```
 
-**Command**: `DiffPilot: Generate Changelog`
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `baseBranch` | auto-detected | Base branch |
 
-**Parameters**:
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `baseBranch` | string | No | Base branch (default: 'main') |
-| `featureBranch` | string | No | Feature branch (default: current branch) |
-| `format` | string | No | Format: 'keepachangelog' or 'simple' |
+---
 
-**Example prompt**: "Generate a changelog for the commits since main"
+### #generate_changelog
+Generate changelog from commits (Keep a Changelog format).
+
+```
+@workspace #generate_changelog
+```
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `baseBranch` | main | Base branch |
+| `featureBranch` | current branch | Feature branch |
+| `format` | keepachangelog | Format: keepachangelog, simple |

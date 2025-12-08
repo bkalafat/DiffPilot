@@ -8,3 +8,13 @@ tsconfig.json
 **/*.map
 .eslintrc.json
 *.vsix
+images/AppIcons/**
+images/icon.png
+images/icon.svg
+images/icon-new.png
+images/icon-new.svg
+images/diffpilot.ico
+images/diffpilot-256.png
+images/lens.png
+images/lens-plus-minus.png
+images/banner.png

@@ -1,6 +1,35 @@
 # Change Log
 
-All notable changes to the "DiffPilot" extension will be documented in this file.
+All notable changes to DiffPilot will be documented here.
+
+## [1.1.5] - 2025-12-08
+
+### Changed
+- Updated README with use cases: self-review before PR, reviewer workflow
+- Added example prompts with `#tool` syntax
+- Highlighted auto branch detection feature
+- Improved package description
+
+## [1.1.4] - 2025-12-07
+
+### Changed
+- New extension icon (lens with plus/minus)
+
+## [1.1.2] - 2025-12-07
+
+### Changed
+- Optimized package size (removed unused assets)
+- Using high-quality 128x128 icon
+
+## [1.1.1] - 2025-12-07
+
+### Changed
+- Updated extension icon (removed background circle)
+
+## [1.1.0] - 2025-12-07
+
+### Changed
+- Improved tool documentation with concise descriptions
 
 ## [1.0.9] - 2025-12-07
 
@@ -31,7 +60,7 @@ All notable changes to the "DiffPilot" extension will be documented in this file
 ## [1.0.5] - 2025-12-07
 
 ### Added
-- Published to NuGet as .NET tool
+- Published to NuGet as .NET tool (`dotnet tool install -g DiffPilot`)
 - Published to MCP Registry (registry.modelcontextprotocol.io)
 
 ## [1.0.0] - 2025-12-06
@@ -40,5 +69,7 @@ All notable changes to the "DiffPilot" extension will be documented in this file
 - Initial release with 9 MCP tools
 - **PR Review**: `get_pr_diff`, `review_pr_changes`, `generate_pr_title`, `generate_pr_description`
 - **Developer Tools**: `generate_commit_message`, `scan_secrets`, `diff_stats`, `suggest_tests`, `generate_changelog`
+- Auto branch detection (main/master/develop)
+- Secret scanning patterns (API keys, passwords, tokens, JWT)
 - SCM panel integration
 - Status bar indicator

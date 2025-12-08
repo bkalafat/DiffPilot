@@ -1,121 +1,122 @@
-# 🚀 DiffPilot
+# 🔍 DiffPilot
 
-**MCP Server for AI-Powered PR Code Review**
+**Local AI Code Review Before You Push**
 
-<!-- mcp-name: io.github.bkalafat/diffpilot -->
-
-[![.NET](https://img.shields.io/badge/.NET-9.0-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
-[![MCP](https://img.shields.io/badge/MCP-Protocol-00ADD8?style=for-the-badge&logo=json&logoColor=white)](https://modelcontextprotocol.io/)
-[![VS Code](https://img.shields.io/badge/VS%20Code-Extension-007ACC?style=for-the-badge&logo=visualstudiocode&logoColor=white)](https://marketplace.visualstudio.com/items?itemName=BurakKalafat.diffpilot)
-[![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
-
-*Works with GitHub Copilot, Claude, Azure DevOps, TFS • 100% Local • Zero Dependencies*
-
-[Features](#-features) • [Installation](#-installation) • [Tools](#-tools) • [Configuration](#-configuration)
+[![.NET 9](https://img.shields.io/badge/.NET-9.0-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
+[![VS Code](https://img.shields.io/badge/VS%20Code-1.101+-007ACC?style=for-the-badge&logo=visualstudiocode&logoColor=white)](https://marketplace.visualstudio.com/items?itemName=BurakKalafat.diffpilot)
+[![MCP](https://img.shields.io/badge/MCP-Protocol-00ADD8?style=for-the-badge)](https://modelcontextprotocol.io/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
 ---
 
-## 🎯 What is DiffPilot?
+## 💡 Why DiffPilot?
 
-DiffPilot is an MCP (Model Context Protocol) server that provides AI-powered PR code review and developer productivity tools. It runs locally and works with any MCP-compatible AI client.
+**Review your code locally before creating a PR.** DiffPilot is an MCP server that lets you:
 
-### Key Benefits
-- 🔍 **Auto Branch Detection** - Automatically detects your base branch
-- 📝 **Smart PR Generation** - Conventional commit titles & comprehensive descriptions
-- 🔐 **Secret Scanning** - Detects API keys, passwords, tokens before commit
-- 🧪 **Test Suggestions** - Analyzes code patterns and recommends test cases
-- ⚡ **Zero Dependencies** - Only uses .NET BCL, no external packages
+1. **Self-Review Before PR** - Run AI code review on your local changes after your last commit, before pushing
+2. **Reviewer Workflow** - As a code reviewer, checkout the source branch locally and get AI-assisted review
+3. **Auto Branch Detection** - No need to specify `main` - DiffPilot finds your base branch automatically
+
+> 🔒 **100% Local** - No cloud, no external APIs. Works with Azure DevOps, TFS, air-gapped environments.
 
 ---
 
-## ✨ Features
+## 🚀 Quick Start
+
+### Install
+```bash
+# VS Code Marketplace
+ext install BurakKalafat.diffpilot
+
+# Or NuGet (.NET tool)
+dotnet tool install -g DiffPilot
+```
+
+### Use with GitHub Copilot
+```
+# Review my changes (auto-detects base branch)
+@workspace #review_pr_changes
+
+# Review with focus areas
+@workspace #review_pr_changes focus on security and error handling
+
+# Generate commit message
+@workspace #generate_commit_message
+
+# Scan for secrets before committing
+@workspace #scan_secrets
+```
+
+---
+
+## 🛠️ 9 MCP Tools
+
+### PR Review Tools
+| Tool | Example Prompt |
+|------|----------------|
+| `#get_pr_diff` | "Show diff between my branch and main" |
+| `#review_pr_changes` | "Review my PR for security issues" |
+| `#generate_pr_title` | "Generate a conventional PR title" |
+| `#generate_pr_description` | "Create PR description with checklist" |
+
+### Developer Tools
+| Tool | Example Prompt |
+|------|----------------|
+| `#generate_commit_message` | "Generate commit message for staged changes" |
+| `#scan_secrets` | "Check for API keys in my changes" |
+| `#diff_stats` | "Show change statistics" |
+| `#suggest_tests` | "What tests should I write?" |
+| `#generate_changelog` | "Generate changelog from commits" |
+
+---
+
+## ✨ Key Features
 
 | Feature | Description |
 |---------|-------------|
-| 🔄 **PR Diff** | Get diff between branches |
-| 📊 **Code Review** | AI-structured diff output for review |
-| 🏷️ **PR Title** | Conventional commit format titles |
-| 📋 **PR Description** | Full description with checklist |
-| 💬 **Commit Message** | Generate from staged/unstaged changes |
-| 🔐 **Secret Scan** | Detect API keys, passwords, tokens |
-| 📈 **Diff Stats** | Lines added/removed, file breakdown |
+| 🔄 **Auto Branch Detection** | Automatically finds `main`, `master`, or `develop` |
+| 🔐 **Secret Scanning** | Detects API keys, passwords, tokens, JWT |
+| 📊 **Diff Statistics** | Lines added/removed, file breakdown by type |
 | 🧪 **Test Suggestions** | Pattern-based test case recommendations |
-| 📝 **Changelog** | Keep a Changelog format from commits |
+| 📝 **Conventional Commits** | Generate `feat:`, `fix:`, `refactor:` messages |
 
 ---
 
-## ⚡ Installation
+## 📋 Use Cases
 
-### VS Code Extension (Recommended)
+### 1. Self-Review Before PR
+```
+# After finishing your work, before creating PR:
+@workspace #review_pr_changes
 
-1. Install from [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=BurakKalafat.diffpilot)
-2. The extension automatically registers as an MCP server
-3. Use with GitHub Copilot Agent Mode or any MCP client
+# AI reviews your changes and provides feedback
+# Fix issues locally, then push with confidence
+```
 
-### Manual Setup
-
+### 2. Code Reviewer Workflow
 ```bash
-# Prerequisites: .NET 9 SDK, Git
+# Checkout the feature branch locally
+git checkout feature/user-auth
 
-# Clone and build
-git clone https://github.com/bkalafat/DiffPilot.git
-cd DiffPilot
-dotnet build
+# Use DiffPilot to review
+@workspace #review_pr_changes focus on security
 
-# Run tests
-dotnet test
-
-# Run server
-dotnet run
+# Get structured review with AI assistance
 ```
 
-### MCP Client Configuration
-
-```json
-{
-  "mcpServers": {
-    "diffpilot": {
-      "command": "dotnet",
-      "args": ["run", "--project", "/path/to/DiffPilot"],
-      "cwd": "/your/git/repository"
-    }
-  }
-}
+### 3. Pre-Commit Secret Check
 ```
+@workspace #scan_secrets
 
----
-
-## 🛠️ Tools
-
-### PR Review Tools
-
-| Tool | Purpose |
-|------|---------|
-| `get_pr_diff` | Raw diff between branches |
-| `review_pr_changes` | Diff with AI review instructions |
-| `generate_pr_title` | Conventional PR title (feat/fix/refactor) |
-| `generate_pr_description` | Full PR description with checklist |
-
-### Developer Tools
-
-| Tool | Purpose |
-|------|---------|
-| `generate_commit_message` | Commit message from staged/unstaged changes |
-| `scan_secrets` | Detect API keys, passwords, tokens |
-| `diff_stats` | Change statistics (lines, files, types) |
-| `suggest_tests` | Test case recommendations |
-| `generate_changelog` | Changelog from commits (Keep a Changelog) |
+# Catches API keys, passwords, tokens before they're committed
+```
 
 ---
 
 ## ⚙️ Configuration
 
-### VS Code Settings
-
 ```json
 {
-  "diffpilot.dotnetPath": "dotnet",
-  "diffpilot.serverPath": "",
   "diffpilot.defaultBaseBranch": "main",
   "diffpilot.prTitleStyle": "conventional",
   "diffpilot.commitMessageStyle": "conventional"
@@ -124,52 +125,65 @@ dotnet run
 
 ---
 
-## 📖 Usage Examples
+## 📦 Installation Options
 
-```
-# Get PR diff
-"Show me the changes compared to main branch"
+| Method | Command |
+|--------|---------|
+| VS Code | `ext install BurakKalafat.diffpilot` |
+| NuGet | `dotnet tool install -g DiffPilot` |
+| Manual | `git clone` + `dotnet build` |
 
-# Code review
-"Review this PR for security and performance issues"
-
-# Generate PR title
-"Suggest a PR title for these changes"
-
-# Scan for secrets
-"Check if there are any secrets in my changes"
-
-# Generate commit message
-"Create a commit message for my staged changes"
-```
+**Requirements:** .NET 9 SDK, VS Code 1.101+, Git
 
 ---
 
-## 🏗️ Architecture
+## 📜 Version History
 
-```
-DiffPilot/
-├── src/
-│   ├── Program.cs           # Entry point (JSON-RPC loop)
-│   ├── Git/GitService.cs    # Git command execution
-│   ├── Protocol/            # JSON-RPC & MCP handlers
-│   └── Tools/               # Tool implementations
-├── tests/                   # Unit tests
-└── vscode-extension/        # VS Code extension wrapper
-```
+### 1.1.5 (2025-12-08)
+- Updated README with use cases and `#tool` prompts
+- Highlighted auto branch detection
 
-**Tech Stack:** C# 13 / .NET 9 | JSON-RPC 2.0 | MCP stdio | xUnit
+### 1.1.4 (2025-12-07)
+- Icon refinements
+
+### 1.1.3 (2025-12-07)
+- New extension icon (lens with plus/minus)
+
+### 1.1.2 (2025-12-07)
+- Optimized package size
+
+### 1.1.1 (2025-12-07)
+- Updated extension icon
+
+### 1.1.0 (2025-12-07)
+- Improved tool documentation
+
+### 1.0.9 (2025-12-07)
+- Fixed: Server uses workspace folder for git operations
+
+### 1.0.8 (2025-12-07)
+- Shortened tool descriptions for cleaner UI
+
+### 1.0.7 (2025-12-07)
+- Fixed: Bundled server includes TargetFramework
+
+### 1.0.6 (2025-12-07)
+- Fixed: MCP auto-registration for VS Code 1.101+
+
+### 1.0.5 (2025-12-07)
+- Published to NuGet and MCP Registry
+
+### 1.0.0 (2025-12-06)
+- Initial release with 9 MCP tools
 
 ---
 
 ## 📄 License
 
-MIT License - see [LICENSE](LICENSE) file.
+MIT License - [Burak Kalafat](https://github.com/bkalafat)
 
 ---
 
----
+**[GitHub](https://github.com/bkalafat/DiffPilot)** • **[VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=BurakKalafat.diffpilot)** • **[NuGet](https://www.nuget.org/packages/DiffPilot)**
 
-**[GitHub](https://github.com/bkalafat/DiffPilot)** • **[VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=BurakKalafat.diffpilot)** • **[@bkalafat](https://github.com/bkalafat)**
-
-⭐ Star this repo if you find it useful!
+⭐ Star if useful!
