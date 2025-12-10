@@ -78,6 +78,69 @@ export async function getCurrentBranch(workingDirectory: string): Promise<string
 }
 
 /**
+ * Gets the upstream branch reference for a given branch.
+ * Returns the full remote/branch reference (e.g., "origin/main").
+ */
+export async function getUpstreamBranch(
+  workingDirectory: string,
+  branch?: string
+): Promise<string | null> {
+  const targetBranch = branch ?? (await getCurrentBranch(workingDirectory));
+  if (!targetBranch) {
+    return null;
+  }
+
+  const result = await runGitCommand(
+    `rev-parse --abbrev-ref ${targetBranch}@{upstream}`,
+    workingDirectory
+  );
+  
+  if (result.exitCode !== 0 || !result.output.trim()) {
+    return null;
+  }
+  
+  return result.output.trim();
+}
+
+/**
+ * Gets the default branch for the repository using symbolic-ref.
+ * Tries to get the default branch from the remote's HEAD.
+ */
+export async function getDefaultBranch(
+  workingDirectory: string,
+  remote: string = 'origin'
+): Promise<string | null> {
+  // Try to get default branch via symbolic-ref (most reliable)
+  const result = await runGitCommand(
+    `symbolic-ref refs/remotes/${remote}/HEAD`,
+    workingDirectory
+  );
+  
+  if (result.exitCode === 0 && result.output.trim()) {
+    // Output is like "refs/remotes/origin/main"
+    const ref = result.output.trim();
+    const prefix = `refs/remotes/${remote}/`;
+    if (ref.startsWith(prefix)) {
+      return ref.slice(prefix.length);
+    }
+  }
+  
+  // Fallback: check for common default branches
+  const commonDefaults = ['main', 'master', 'develop'];
+  for (const branch of commonDefaults) {
+    const checkResult = await runGitCommand(
+      `show-ref --verify --quiet refs/remotes/${remote}/${branch}`,
+      workingDirectory
+    );
+    if (checkResult.exitCode === 0) {
+      return branch;
+    }
+  }
+  
+  return null;
+}
+
+/**
  * Finds the base branch that the current branch was created from.
  * Uses multiple detection strategies in order of reliability:
  * 1. Reflog - "Created from X" entry

@@ -1,0 +1,19 @@
+.vscode
+.vscode-test
+node_modules
+src/
+*.map
+*.ts
+!*.d.ts
+.gitignore
+tsconfig.json
+vscode.d.ts
+eslint.config.mjs
+.eslintrc.json
+*.vsix
+build-server.js
+
+# Server source files (keep compiled)
+server/src
+server/*.ts
+server/node_modules/.package-lock.json

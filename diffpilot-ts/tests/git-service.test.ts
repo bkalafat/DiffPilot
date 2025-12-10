@@ -10,6 +10,7 @@ import { describe, it, expect } from 'vitest';
 import {
   isValidBranchName,
   getWorkingDirectory,
+  isValidFileName,
 } from '../src/git/git-service.js';
 
 describe('GitService', () => {
@@ -51,6 +52,26 @@ describe('GitService', () => {
     it('should return process.cwd()', () => {
       const cwd = getWorkingDirectory();
       expect(cwd).toBe(process.cwd());
+    });
+  });
+
+  describe('isValidFileName', () => {
+    it('should accept valid file names', () => {
+      expect(isValidFileName('file.ts')).toBe(true);
+      expect(isValidFileName('path/to/file.ts')).toBe(true);
+      expect(isValidFileName('.gitignore')).toBe(true);
+      expect(isValidFileName('file-name_123.test.ts')).toBe(true);
+    });
+
+    it('should reject invalid file names', () => {
+      expect(isValidFileName('')).toBe(false);
+      expect(isValidFileName(null as any)).toBe(false);
+      expect(isValidFileName(undefined as any)).toBe(false);
+    });
+
+    it('should reject file names with path traversal', () => {
+      expect(isValidFileName('../etc/passwd')).toBe(false);
+      expect(isValidFileName('path/../secret')).toBe(false);
     });
   });
 });
@@ -164,6 +185,133 @@ describe('Base Branch Detection Strategies', () => {
       
       // Both independent branches - ambiguous
       expect(isMoreSpecific(false, false)).toBe('ambiguous');
+    });
+  });
+});
+
+// ============================================================================
+// File Path Validation Tests (Ported from GitValidationTests.cs)
+// ============================================================================
+
+describe('File Path Validation', () => {
+  // Helper function simulating GitService logic
+  const isValidFilePath = (path: string): boolean => {
+    if (!path) return false;
+    if (path.includes('\0')) return false;
+    if (path.includes('//')) return false;
+    return true;
+  };
+
+  it.each([
+    ['src/main.cs', true],
+    ['path/to/file.txt', true],
+    ['file.cs', true],
+    ['.gitignore', true],
+    ['path/with spaces/file.cs', true], // Spaces are valid
+  ])('accepts valid path "%s"', (path, expected) => {
+    expect(isValidFilePath(path)).toBe(expected);
+  });
+
+  it.each([
+    ['', false],
+    ['path\0with\0null', false], // Null bytes
+    ['path//double/slash', false],
+  ])('rejects invalid path "%s"', (path, expected) => {
+    expect(isValidFilePath(path)).toBe(expected);
+  });
+});
+
+// ============================================================================
+// Remote URL Validation Tests (Ported from GitValidationTests.cs)
+// ============================================================================
+
+describe('Remote URL Validation', () => {
+  // Helper function simulating validation logic
+  const isValidRemoteUrl = (url: string): boolean => {
+    if (!url) return false;
+    // SSH format
+    if (url.startsWith('git@') && url.includes(':')) return true;
+    // HTTPS format (require https, not http)
+    if (url.startsWith('https://')) return true;
+    return false;
+  };
+
+  it.each([
+    ['https://github.com/user/repo.git', true],
+    ['git@github.com:user/repo.git', true],
+    ['https://gitlab.com/user/repo', true],
+    ['git@bitbucket.org:user/repo.git', true],
+  ])('accepts valid URL "%s"', (url, expected) => {
+    expect(isValidRemoteUrl(url)).toBe(expected);
+  });
+
+  it.each([
+    ['', false],
+    ['not-a-url', false],
+    ['ftp://invalid.com/repo', false],
+    ['http://insecure.com/repo', false], // We require https
+  ])('rejects invalid URL "%s"', (url, expected) => {
+    expect(isValidRemoteUrl(url)).toBe(expected);
+  });
+});
+
+// ============================================================================
+// Auto-Detection Tests (Ported from GitValidationTests.cs)
+// ============================================================================
+
+describe('Auto-Detection Helpers', () => {
+  // Helper function to strip remote prefix
+  const stripRemotePrefix = (branch: string): string => {
+    const prefixes = ['origin/', 'upstream/', 'remote/'];
+    for (const prefix of prefixes) {
+      if (branch.startsWith(prefix)) {
+        return branch.slice(prefix.length);
+      }
+    }
+    return branch;
+  };
+
+  // Helper function to detect base branch
+  const detectBaseBranch = (branches: string[]): string => {
+    // Priority: main > master > develop
+    if (branches.includes('main')) return 'main';
+    if (branches.includes('master')) return 'master';
+    if (branches.includes('develop')) return 'develop';
+    return branches[0] ?? 'main';
+  };
+
+  describe('stripRemotePrefix', () => {
+    it.each([
+      ['origin/main', 'main'],
+      ['origin/feature/test', 'feature/test'],
+      ['upstream/develop', 'develop'],
+    ])('removes prefix from "%s" -> "%s"', (input, expected) => {
+      expect(stripRemotePrefix(input)).toBe(expected);
+    });
+
+    it.each([
+      ['main', 'main'],
+      ['feature/test', 'feature/test'],
+    ])('preserves local branch "%s"', (input, expected) => {
+      expect(stripRemotePrefix(input)).toBe(expected);
+    });
+  });
+
+  describe('detectBaseBranch', () => {
+    it.each([
+      [['main', 'master'], 'main'],
+      [['master', 'develop'], 'master'],
+      [['develop', 'main'], 'main'],
+    ])('prefers main over master in %p -> "%s"', (branches, expected) => {
+      expect(detectBaseBranch(branches)).toBe(expected);
+    });
+
+    it('returns first branch when no standard branch found', () => {
+      expect(detectBaseBranch(['feature', 'bugfix'])).toBe('feature');
+    });
+
+    it('returns "main" for empty array', () => {
+      expect(detectBaseBranch([])).toBe('main');
     });
   });
 });

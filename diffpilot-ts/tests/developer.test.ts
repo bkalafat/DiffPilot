@@ -234,6 +234,10 @@ describe('Developer Tools', () => {
   });
 
   describe('generateChangelog', () => {
+    beforeEach(() => {
+      mockRunGitCommand.mockReset();
+    });
+
     it('should handle no commits', async () => {
       mockRunGitCommand
         .mockResolvedValueOnce({ exitCode: 0, output: '' }) // fetch
@@ -244,7 +248,34 @@ describe('Developer Tools', () => {
       expect(result.content[0].text).toContain('No commits');
     });
 
-    // Note: Additional changelog tests require more complex mocking
-    // due to the interactions between getCurrentBranch and runGitCommand
+    it('should categorize feat commits as Added', async () => {
+      mockRunGitCommand
+        .mockResolvedValueOnce({ exitCode: 0, output: '' }) // fetch
+        .mockResolvedValueOnce({ exitCode: 0, output: 'abc1234|feat: add new feature|John|2024-01-01\ndef5678|fix: fix bug|Jane|2024-01-02' }); // log with commits
+
+      const result = await generateChangelog({});
+
+      expect(result.content[0].text).toContain('Added');
+    });
+
+    it('should categorize fix commits as Fixed', async () => {
+      mockRunGitCommand
+        .mockResolvedValueOnce({ exitCode: 0, output: '' }) // fetch
+        .mockResolvedValueOnce({ exitCode: 0, output: 'abc1234|fix: resolve bug|John|2024-01-01' }); // log with fix commit
+
+      const result = await generateChangelog({});
+
+      expect(result.content[0].text).toContain('Fixed');
+    });
+
+    it('should use simple format when specified', async () => {
+      mockRunGitCommand
+        .mockResolvedValueOnce({ exitCode: 0, output: '' }) // fetch
+        .mockResolvedValueOnce({ exitCode: 0, output: 'abc1234|feat: new feature|John|2024-01-01' }); // log
+
+      const result = await generateChangelog({ format: 'simple' });
+
+      expect(result.content[0].text).toContain('Changes');
+    });
   });
 });

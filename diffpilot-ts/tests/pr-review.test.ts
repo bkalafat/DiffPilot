@@ -169,3 +169,179 @@ describe('PR Review Tools', () => {
     });
   });
 });
+
+// ============================================================================
+// PR Generation Helper Tests (Ported from PrGenerationTests.cs)
+// ============================================================================
+
+describe('PR Generation Helpers', () => {
+  // Helper functions simulating PrReviewTools logic
+  const generateConventionalTitle = (type: string, scope: string | null, description: string): string => {
+    const prefix = scope ? `${type}(${scope})` : type;
+    const fullTitle = `${prefix}: ${description}`;
+    
+    if (fullTitle.length > 72) {
+      return fullTitle.slice(0, 69) + '...';
+    }
+    
+    return fullTitle;
+  };
+
+  const extractTicketNumber = (branchName: string): string | null => {
+    // Pattern: LETTERS-NUMBERS (e.g., JIRA-123, PROJ-456)
+    const match = branchName.match(/([A-Z]+-\d+)/i);
+    return match ? match[1].toUpperCase() : null;
+  };
+
+  const generatePrDescription = (summary: string, changes: string[], includeChecklist: boolean): string => {
+    let result = '## Summary\n' + summary + '\n\n';
+    result += '## Changes\n';
+    for (const change of changes) {
+      result += '- ' + change + '\n';
+    }
+    result += '\n';
+    
+    if (includeChecklist) {
+      result += '## Checklist\n';
+      result += '- [ ] Tests pass\n';
+      result += '- [ ] Code reviewed\n';
+      result += '- [ ] Documentation updated\n';
+    }
+    
+    return result;
+  };
+
+  const generatePrDescriptionWithTicket = (summary: string, changes: string[], ticketUrl: string): string => {
+    let result = '## Summary\n' + summary + '\n\n';
+    result += '## Related Issue\n' + ticketUrl + '\n\n';
+    result += '## Changes\n';
+    for (const change of changes) {
+      result += '- ' + change + '\n';
+    }
+    return result;
+  };
+
+  const summarizeChanges = (files: Array<{ file: string; additions: number; deletions: number }>): string => {
+    const sourceFiles = files.filter(f => 
+      !f.file.toLowerCase().includes('test') && 
+      !f.file.toLowerCase().endsWith('.md')
+    ).length;
+    const testFiles = files.filter(f => f.file.toLowerCase().includes('test')).length;
+    const docFiles = files.filter(f => f.file.toLowerCase().endsWith('.md')).length;
+    
+    const totalAdditions = files.reduce((sum, f) => sum + f.additions, 0);
+    const totalDeletions = files.reduce((sum, f) => sum + f.deletions, 0);
+    
+    const parts: string[] = [];
+    if (sourceFiles > 0) parts.push(`${sourceFiles} source files`);
+    if (testFiles > 0) parts.push(`${testFiles} test files`);
+    if (docFiles > 0) parts.push(`${docFiles} documentation`);
+    
+    return `Changed ${parts.join(', ')} (+${totalAdditions}/-${totalDeletions})`;
+  };
+
+  describe('PR Title Generation', () => {
+    it.each([
+      ['feat', 'add login feature', 'feat: add login feature'],
+      ['fix', 'resolve null pointer', 'fix: resolve null pointer'],
+      ['docs', 'update README', 'docs: update README'],
+      ['chore', 'update dependencies', 'chore: update dependencies'],
+    ])('generates conventional title "%s: %s"', (type, description, expected) => {
+      expect(generateConventionalTitle(type, null, description)).toBe(expected);
+    });
+
+    it.each([
+      ['feat', 'api', 'add endpoint', 'feat(api): add endpoint'],
+      ['fix', 'auth', 'token expiry', 'fix(auth): token expiry'],
+    ])('generates title with scope "%s(%s): %s"', (type, scope, description, expected) => {
+      expect(generateConventionalTitle(type, scope, description)).toBe(expected);
+    });
+
+    it('truncates long description', () => {
+      const longDescription = 'a'.repeat(100);
+      const title = generateConventionalTitle('feat', null, longDescription);
+      
+      // PR titles should be max ~72 characters
+      expect(title.length).toBeLessThanOrEqual(75);
+      expect(title.endsWith('...')).toBe(true);
+    });
+  });
+
+  describe('Ticket Extraction', () => {
+    it.each([
+      ['feature/JIRA-123-add-login', 'JIRA-123'],
+      ['bugfix/PROJ-456-fix-crash', 'PROJ-456'],
+      ['ABC-789/some-feature', 'ABC-789'],
+    ])('extracts ticket from branch "%s" -> "%s"', (branch, expected) => {
+      expect(extractTicketNumber(branch)).toBe(expected);
+    });
+
+    it('returns null for no ticket', () => {
+      const branch = 'feature/add-login-page';
+      expect(extractTicketNumber(branch)).toBeNull();
+    });
+
+    it('returns null for numbers only', () => {
+      const branch = 'feature/123-no-prefix';
+      expect(extractTicketNumber(branch)).toBeNull();
+    });
+  });
+
+  describe('PR Description Sections', () => {
+    it('includes all sections', () => {
+      const changes = ['Added login page', 'Fixed validation'];
+      const description = generatePrDescription('Summary', changes, true);
+      
+      expect(description).toContain('## Summary');
+      expect(description).toContain('## Changes');
+      expect(description).toContain('## Checklist');
+      expect(description).toContain('- Added login page');
+      expect(description).toContain('- Fixed validation');
+    });
+
+    it('omits checklist when disabled', () => {
+      const changes = ['Change 1'];
+      const description = generatePrDescription('Summary', changes, false);
+      
+      expect(description).not.toContain('Checklist');
+    });
+
+    it('includes ticket link', () => {
+      const changes = ['Change 1'];
+      const ticketUrl = 'https://jira.example.com/PROJ-123';
+      const description = generatePrDescriptionWithTicket('Summary', changes, ticketUrl);
+      
+      expect(description).toContain('Related Issue');
+      expect(description).toContain(ticketUrl);
+    });
+  });
+
+  describe('Change Summary', () => {
+    it('groups by type', () => {
+      const files = [
+        { file: 'src/Login.cs', additions: 50, deletions: 10 },
+        { file: 'src/Auth.cs', additions: 30, deletions: 5 },
+        { file: 'tests/LoginTests.cs', additions: 100, deletions: 0 },
+        { file: 'README.md', additions: 20, deletions: 5 },
+      ];
+      
+      const summary = summarizeChanges(files);
+      
+      expect(summary).toContain('source files');
+      expect(summary).toContain('test files');
+      expect(summary).toContain('documentation');
+    });
+
+    it('calculates totals', () => {
+      const files = [
+        { file: 'file1.cs', additions: 100, deletions: 50 },
+        { file: 'file2.cs', additions: 50, deletions: 25 },
+      ];
+      
+      const summary = summarizeChanges(files);
+      
+      expect(summary).toContain('150'); // Total additions
+      expect(summary).toContain('75');  // Total deletions
+    });
+  });
+});

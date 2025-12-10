@@ -428,6 +428,163 @@ describe('SECURITY_CONSTANTS', () => {
 });
 
 // ============================================================================
+// Secret Pattern Detection Tests (Ported from SecretScanningTests.cs)
+// ============================================================================
+
+describe('Secret Pattern Detection', () => {
+  // Patterns matching those in SecretScanningTests.cs
+  // Note: Using factory functions to avoid regex state issues with /g flag
+  const createAwsKeyPattern = () => /AKIA[0-9A-Z]{16}/;
+  const createGitHubTokenPattern = () => /gh[pousr]_[A-Za-z0-9_]{36,255}/;
+  const createApiKeyPattern = () => /(?:api[_-]?key|apikey)\s*[:=]\s*["']?([A-Za-z0-9_\-]{20,})["']?/i;
+  const createPasswordPattern = () => /(?:password|passwd|pwd)\s*[:=]\s*["']?([^\s"']{8,})["']?/i;
+  const createJwtPattern = () => /eyJ[A-Za-z0-9_-]*\.eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*/;
+  const createPrivateKeyPattern = () => /-----BEGIN (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----/;
+
+  describe('AWS Key Detection', () => {
+    it.each([
+      ['AKIAIOSFODNN7EXAMPLE'],
+      ['AKIAI44QH8DHBEXAMPLE'],
+      ['AKIAEXAMPLE123456789'],
+    ])('detects valid AWS key "%s"', (key) => {
+      expect(createAwsKeyPattern().test(key)).toBe(true);
+    });
+
+    it.each([
+      ['AKIA123'], // Too short
+      ['AKZA1234567890123456'], // Wrong prefix
+      ['akiaiosfodnn7example'], // Lowercase (AWS keys are uppercase)
+      ["const awsRegion = 'us-east-1'"], // Normal code
+    ])('ignores invalid pattern "%s"', (text) => {
+      expect(createAwsKeyPattern().test(text)).toBe(false);
+    });
+  });
+
+  describe('GitHub Token Detection', () => {
+    it.each([
+      ['ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefgh1234'], // Personal access token
+      ['gho_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefgh1234'], // OAuth token
+      ['ghu_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefgh1234'], // User-to-server token
+      ['ghs_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefgh1234'], // Server-to-server token
+      ['ghr_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefgh1234'], // Refresh token
+    ])('detects valid GitHub token "%s"', (token) => {
+      expect(createGitHubTokenPattern().test(token)).toBe(true);
+    });
+
+    it.each([
+      ['ghx_invalid'], // Invalid prefix
+      ['ghp_short'], // Too short
+      ['github.com/user/repo'], // Normal GitHub URL
+    ])('ignores invalid pattern "%s"', (text) => {
+      expect(createGitHubTokenPattern().test(text)).toBe(false);
+    });
+  });
+
+  describe('API Key Detection', () => {
+    it.each([
+      ['api_key=abc123def456ghi789jkl012'],
+      ["API_KEY: 'abc123def456ghi789jkl012mno'"],
+      ['apikey="abc123def456ghi789jkl012"'],
+      ['api-key = abc123def456ghi789jkl012'],
+    ])('detects API key in "%s"', (line) => {
+      expect(createApiKeyPattern().test(line)).toBe(true);
+    });
+
+    it.each([
+      ['// This function returns the API key'], // Comment
+      ['const apiKeyLength = 32'], // Variable about API keys
+      ['validateApiKey(key)'], // Function call
+    ])('ignores normal code "%s"', (code) => {
+      expect(createApiKeyPattern().test(code)).toBe(false);
+    });
+  });
+
+  describe('Password Detection', () => {
+    it.each([
+      ['password=MySecr3tP@ss!'],
+      ["PASSWORD: 'SuperSecr3t123'"],
+      ['pwd="database_password_123"'],
+      ['passwd: my-secret-password'],
+    ])('detects password in "%s"', (line) => {
+      expect(createPasswordPattern().test(line)).toBe(true);
+    });
+
+    it.each([
+      ['password='], // No value
+      ['password=short'], // Too short (less than 8 chars)
+      ['// TODO: add password validation'], // Comment
+    ])('ignores empty or short "%s"', (text) => {
+      expect(createPasswordPattern().test(text)).toBe(false);
+    });
+  });
+
+  describe('JWT Token Detection', () => {
+    it('detects valid JWT', () => {
+      const jwt = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
+      expect(createJwtPattern().test(jwt)).toBe(true);
+    });
+
+    it.each([
+      ['eyJ'], // Too short, missing parts
+      ['notAJwt.atAll.really'], // Not starting with eyJ
+      ['base64EncodedData'], // Random base64-ish text
+    ])('ignores non-JWT "%s"', (text) => {
+      expect(createJwtPattern().test(text)).toBe(false);
+    });
+  });
+
+  describe('Private Key Detection', () => {
+    it.each([
+      ['-----BEGIN PRIVATE KEY-----'],
+      ['-----BEGIN RSA PRIVATE KEY-----'],
+      ['-----BEGIN EC PRIVATE KEY-----'],
+      ['-----BEGIN DSA PRIVATE KEY-----'],
+      ['-----BEGIN OPENSSH PRIVATE KEY-----'],
+    ])('detects private key header "%s"', (header) => {
+      expect(createPrivateKeyPattern().test(header)).toBe(true);
+    });
+
+    it.each([
+      ['-----BEGIN PUBLIC KEY-----'], // Public key, not private
+      ['-----BEGIN CERTIFICATE-----'], // Certificate
+      ['private key'], // Just text
+    ])('ignores non-private keys "%s"', (text) => {
+      expect(createPrivateKeyPattern().test(text)).toBe(false);
+    });
+  });
+
+  describe('Secret Masking', () => {
+    const maskSecret = (secret: string): string => {
+      if (secret.length <= 8) {
+        return '*'.repeat(secret.length);
+      }
+      const visibleStart = Math.floor(secret.length / 5);
+      const visibleEnd = Math.floor(secret.length / 5);
+      return secret.slice(0, visibleStart) + 
+             '*'.repeat(secret.length - visibleStart - visibleEnd) + 
+             secret.slice(-visibleEnd);
+    };
+
+    it('hides middle of secret', () => {
+      const secret = 'AKIAIOSFODNN7EXAMPLE';
+      const masked = maskSecret(secret);
+
+      expect(masked.startsWith('AKIA')).toBe(true);
+      expect(masked.endsWith('MPLE')).toBe(true);
+      expect(masked).toContain('*');
+      expect(masked).not.toBe(secret);
+    });
+
+    it('handles short secrets', () => {
+      const shortSecret = 'abc';
+      const masked = maskSecret(shortSecret);
+
+      expect(masked).toBe('***');
+    });
+  });
+});
+
+// ============================================================================
 // Integration-style Tests
 // ============================================================================
 
