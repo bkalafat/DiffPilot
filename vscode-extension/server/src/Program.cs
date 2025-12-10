@@ -9,15 +9,28 @@
 // - Only valid JSON-RPC messages may be written to stdout
 // - Logging/diagnostics must go to stderr only
 // - Notifications (requests without id) must not receive a response
+//
+// Security features:
+// - Input size validation to prevent DoS
+// - Secure error messages (no internal details exposed)
+// - All diagnostics go to stderr only
+// - Rate limiting via McpHandlers
 // ============================================================================
 
 using System.Text;
 using System.Text.Json;
 using DiffPilot.Protocol;
+using DiffPilot.Security;
+
+// Security: Maximum input line length to prevent memory exhaustion
+const int MaxInputLineLength = 10_000_000; // 10MB max per message
 
 // Configure console for UTF-8
 Console.OutputEncoding = Encoding.UTF8;
 Console.InputEncoding = Encoding.UTF8;
+
+// Log startup (to stderr only)
+await Console.Error.WriteLineAsync($"[INFO] DiffPilot MCP server started at {DateTime.UtcNow:O}");
 
 // Main loop: read lines from stdin, process requests, write responses to stdout
 while (true)
@@ -26,7 +39,18 @@ while (true)
 
     // EOF - client closed connection, exit gracefully
     if (line == null)
+    {
+        await Console.Error.WriteLineAsync("[INFO] EOF received, shutting down");
         break;
+    }
+
+    // Security: Check input size to prevent DoS
+    if (line.Length > MaxInputLineLength)
+    {
+        SecurityHelpers.LogSecurityEvent("INPUT_TOO_LARGE", $"Rejected input of {line.Length} bytes");
+        WriteError(null, -32600, "Request too large");
+        continue;
+    }
 
     line = line.Trim();
 
@@ -54,6 +78,14 @@ while (true)
         continue;
     }
 
+    // Security: Validate method name format
+    if (request.Method.Length > 100 || request.Method.Contains('\0'))
+    {
+        SecurityHelpers.LogSecurityEvent("INVALID_METHOD", "Method name validation failed");
+        WriteError(request.Id, -32601, "Invalid method name");
+        continue;
+    }
+
     // Handle the request
     try
     {
@@ -61,11 +93,11 @@ while (true)
     }
     catch (Exception ex)
     {
-        // Internal error - catch-all for unexpected exceptions
-        WriteError(request.Id, -32603, $"Internal error: {ex.Message}");
+        // Security: Don't expose internal error details to client
+        WriteError(request.Id, -32603, "Internal server error");
 
         // Log full exception to stderr for debugging (not to stdout!)
-        await Console.Error.WriteLineAsync($"[ERROR] {ex}");
+        await Console.Error.WriteLineAsync($"[ERROR] {DateTime.UtcNow:O} Unhandled exception: {ex}");
     }
 }
 

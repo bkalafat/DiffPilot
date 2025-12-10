@@ -79,10 +79,30 @@ dotnet tool install -g DiffPilot
 | 📊 **Diff Statistics** | Lines added/removed, file breakdown by type |
 | 🧪 **Test Suggestions** | Pattern-based test case recommendations |
 | 📝 **Conventional Commits** | Generate `feat:`, `fix:`, `refactor:` messages |
+| 🛡️ **Enterprise Security** | Bank-grade input validation, rate limiting, output sanitization |
 
 ---
 
-## 📋 Use Cases
+## � Security
+
+DiffPilot implements enterprise-grade security features:
+
+| Security Feature | Description |
+|-----------------|-------------|
+| **Input Validation** | All parameters validated against strict patterns |
+| **Injection Prevention** | Command injection, path traversal protection |
+| **Output Sanitization** | Auto-redacts secrets from tool outputs |
+| **Rate Limiting** | Prevents DoS attacks (120 req/min) |
+| **Secure Errors** | No internal details exposed to clients |
+| **Audit Logging** | Security events logged to stderr |
+
+**Auto-Redacted Patterns:** API keys, AWS credentials, GitHub/Slack tokens, JWTs, passwords, private keys, connection strings.
+
+See [SECURITY.md](SECURITY.md) for full documentation.
+
+---
+
+## �📋 Use Cases
 
 ### 1. Self-Review Before PR
 ```
@@ -138,6 +158,17 @@ git checkout feature/user-auth
 ---
 
 ## 📜 Version History
+
+### 1.2.0 (2025-12-09)
+- **Security Hardening** - Bank-grade security features
+  - Input validation (CWE-20)
+  - Command injection prevention (CWE-78)
+  - Path traversal protection (CWE-22)
+  - Output sanitization - auto-redacts secrets (CWE-200)
+  - Rate limiting (CWE-400)
+  - Secure error handling
+- Added SECURITY.md documentation
+- 80 new security unit tests
 
 ### 1.1.5 (2025-12-08)
 - Updated README with use cases and `#tool` prompts

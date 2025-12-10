@@ -10,7 +10,8 @@ MCP server for PR code review & developer productivity. JSON-RPC 2.0 over stdio.
 - `src/Git/GitService.cs` - Git command execution
 - `src/Protocol/` - JSON-RPC models & MCP handlers
 - `src/Tools/` - Tool implementations (`PrReviewTools.cs`, `DeveloperTools.cs`)
-- `tests/` - xUnit tests
+- `src/Security/` - Security utilities (`SecurityHelpers.cs`)
+- `tests/` - xUnit tests (293 total, 80 security tests)
 - `vscode-extension/` - VS Code extension wrapper (TypeScript)
 
 ## MCP Tools (9 total)
@@ -32,6 +33,14 @@ MCP server for PR code review & developer productivity. JSON-RPC 2.0 over stdio.
 - Tools return `ToolResult.Success()` or `ToolResult.Error()`
 - Use C# 13 features (primary constructors, collection expressions)
 - See `.github/instructions/dotnet9-best-practices.md` for coding standards
+
+## Security
+- **Input Validation**: Use `SecurityHelpers.ValidateBranchName()`, `ValidateRemoteName()`, `ValidateParameter()`
+- **Output Sanitization**: All tool outputs pass through `SecurityHelpers.SanitizeOutput()`
+- **Rate Limiting**: `SecurityHelpers.CheckRateLimit(toolName)` in McpHandlers
+- **Secure Errors**: Never expose stack traces or internal paths
+- **Logging**: Security events via `SecurityHelpers.LogSecurityEvent()` to stderr
+- See `SECURITY.md` for full documentation
 
 ## Commands
 ```bash

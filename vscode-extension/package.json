@@ -2,7 +2,7 @@
   "name": "diffpilot",
   "displayName": "DiffPilot - MCP Server for Code Review",
   "description": "Local AI code review before you push. Auto branch detection, secret scanning, commit messages. Works with GitHub Copilot, Claude, Azure DevOps.",
-  "version": "1.1.5",
+  "version": "1.2.0",
   "publisher": "BurakKalafat",
   "author": {
     "name": "Burak Kalafat",

@@ -1,0 +1,42 @@
+{
+  "name": "diffpilot",
+  "version": "1.0.0",
+  "description": "MCP server for PR code review and developer productivity",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "diffpilot": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "start": "node dist/index.js",
+    "dev": "tsc --watch"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "code-review",
+    "git",
+    "diff",
+    "pr"
+  ],
+  "author": "BurakKalafat",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.3.0",
+    "vitest": "^2.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AzureBurak/DiffPilot"
+  }
+}

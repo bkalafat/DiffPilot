@@ -4,9 +4,16 @@
 // MCP protocol handlers for the server.
 // Handles initialize, tools/list, and tools/call methods per the MCP spec.
 // All responses must include "jsonrpc": "2.0" and the request's id.
+//
+// Security features:
+// - Input validation on all tool parameters
+// - Rate limiting to prevent DoS attacks
+// - Output sanitization to prevent data leakage
+// - Secure error handling (no stack traces exposed)
 // ============================================================================
 
 using System.Text.Json;
+using DiffPilot.Security;
 using DiffPilot.Tools;
 
 namespace DiffPilot.Protocol;
@@ -313,6 +320,7 @@ internal static class McpHandlers
     /// <summary>
     /// Handles the "tools/call" method.
     /// Dispatches to the appropriate tool handler based on the tool name.
+    /// Includes security validation, rate limiting, and output sanitization.
     /// </summary>
     /// <returns>
     /// A tuple of (result, errorCode, errorMessage).
@@ -347,20 +355,52 @@ internal static class McpHandlers
             return (null, -32602, "Tool name is required.");
         }
 
-        // Dispatch to the appropriate tool
-        ToolResult toolResult = toolCall.Name switch
+        // Security: Validate tool name (alphanumeric, underscore, hyphen only)
+        var toolName = toolCall.Name;
+        if (toolName.Length > 50 || !System.Text.RegularExpressions.Regex.IsMatch(toolName, @"^[a-zA-Z_][a-zA-Z0-9_-]*$"))
         {
-            "get_pr_diff" => await PrReviewTools.GetPrDiffAsync(toolCall.Arguments),
-            "review_pr_changes" => await PrReviewTools.ReviewPrChangesAsync(toolCall.Arguments),
-            "generate_pr_title" => await PrReviewTools.GeneratePrTitleAsync(toolCall.Arguments),
-            "generate_pr_description" => await PrReviewTools.GeneratePrDescriptionAsync(toolCall.Arguments),
-            "generate_commit_message" => await DeveloperTools.GenerateCommitMessageAsync(toolCall.Arguments),
-            "scan_secrets" => await DeveloperTools.ScanSecretsAsync(toolCall.Arguments),
-            "diff_stats" => await DeveloperTools.GetDiffStatsAsync(toolCall.Arguments),
-            "suggest_tests" => await DeveloperTools.SuggestTestsAsync(toolCall.Arguments),
-            "generate_changelog" => await DeveloperTools.GenerateChangelogAsync(toolCall.Arguments),
-            _ => null!,
-        };
+            SecurityHelpers.LogSecurityEvent("INVALID_TOOL_NAME", $"Rejected tool name: {toolName[..Math.Min(20, toolName.Length)]}");
+            return (null, -32601, "Invalid tool name format.");
+        }
+
+        // Security: Rate limiting per tool
+        if (!SecurityHelpers.CheckRateLimit(toolName))
+        {
+            SecurityHelpers.LogSecurityEvent("RATE_LIMIT_EXCEEDED", $"Tool: {toolName}");
+            return (null, -32000, "Rate limit exceeded. Please wait before making more requests.");
+        }
+
+        // Dispatch to the appropriate tool
+        ToolResult toolResult;
+        try
+        {
+            toolResult = toolCall.Name switch
+            {
+                "get_pr_diff" => await PrReviewTools.GetPrDiffAsync(toolCall.Arguments),
+                "review_pr_changes" => await PrReviewTools.ReviewPrChangesAsync(toolCall.Arguments),
+                "generate_pr_title" => await PrReviewTools.GeneratePrTitleAsync(toolCall.Arguments),
+                "generate_pr_description" => await PrReviewTools.GeneratePrDescriptionAsync(toolCall.Arguments),
+                "generate_commit_message" => await DeveloperTools.GenerateCommitMessageAsync(toolCall.Arguments),
+                "scan_secrets" => await DeveloperTools.ScanSecretsAsync(toolCall.Arguments),
+                "diff_stats" => await DeveloperTools.GetDiffStatsAsync(toolCall.Arguments),
+                "suggest_tests" => await DeveloperTools.SuggestTestsAsync(toolCall.Arguments),
+                "generate_changelog" => await DeveloperTools.GenerateChangelogAsync(toolCall.Arguments),
+                _ => null!,
+            };
+        }
+        catch (SecurityException ex)
+        {
+            // Security violations are logged and returned as errors
+            SecurityHelpers.LogSecurityEvent("SECURITY_EXCEPTION", ex.Message);
+            return (null, -32602, ex.Message);
+        }
+        catch (Exception ex)
+        {
+            // Log unexpected exceptions but don't expose details to client
+            SecurityHelpers.LogSecurityEvent("UNEXPECTED_ERROR", $"Tool {toolName}: {ex.GetType().Name}");
+            Console.Error.WriteLine($"[ERROR] Tool execution failed: {ex}");
+            return (null, -32603, "An internal error occurred while processing the request.");
+        }
 
         // Handle unknown tool
         if (toolResult == null)
@@ -368,12 +408,17 @@ internal static class McpHandlers
             return (null, -32601, $"Tool not found: {toolCall.Name}");
         }
 
+        // Security: Sanitize output to prevent sensitive data leakage
+        var sanitizedContent = toolResult.Content.Select(c => new
+        {
+            type = c.Type,
+            text = SecurityHelpers.SanitizeOutput(c.Text)
+        }).ToArray();
+
         // Return tool result in MCP format
         var result = new
         {
-            content = toolResult
-                .Content.Select(c => new { type = c.Type, text = c.Text })
-                .ToArray(),
+            content = sanitizedContent,
             isError = toolResult.IsError,
         };
 

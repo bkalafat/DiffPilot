@@ -2,6 +2,25 @@
 
 All notable changes to DiffPilot will be documented here.
 
+## [1.2.0] - 2025-12-09
+
+### Added
+- **Security Hardening** - Enterprise/bank-grade security features
+  - Input validation (CWE-20) - All parameters validated against strict patterns
+  - Command injection prevention (CWE-78) - Branch names starting with `-` rejected
+  - Path traversal protection (CWE-22) - `..` sequences blocked
+  - Output sanitization (CWE-200) - Auto-redacts secrets from tool outputs
+  - Rate limiting (CWE-400) - 120 requests/min per tool
+  - Secure error handling - No internal details exposed
+- SECURITY.md documentation
+- 80 new security unit tests (293 total tests)
+- SecurityHelpers utility class for input/output security
+
+### Security
+- API keys, AWS credentials, GitHub/Slack tokens auto-redacted from outputs
+- JWT tokens, passwords, private keys, connection strings auto-redacted
+- Audit logging for all security events (to stderr)
+
 ## [1.1.5] - 2025-12-08
 
 ### Changed

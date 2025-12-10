@@ -147,18 +147,50 @@ internal static partial class PrReviewTools
 
         sb.AppendLine("## Review Instructions");
         sb.AppendLine();
-        sb.AppendLine("Please review the following changes for:");
-        sb.AppendLine("1. **Correctness** - Logic errors, edge cases, potential bugs");
-        sb.AppendLine("2. **Security** - SQL injection, XSS, sensitive data exposure, auth issues");
-        sb.AppendLine("3. **Performance** - N+1 queries, unnecessary allocations, inefficient algorithms");
-        sb.AppendLine("4. **Code Quality** - Naming, readability, SOLID principles, duplication");
-        sb.AppendLine("5. **Error Handling** - Missing try/catch, unhandled edge cases");
-        sb.AppendLine("6. **Testing** - Missing test coverage, testability concerns");
+        sb.AppendLine("⚠️ **CRITICAL REVIEW MODE** - Focus on finding problems, not praise.");
+        sb.AppendLine();
+        sb.AppendLine("Analyze the code changes below and identify ALL issues. Be thorough and critical.");
+        sb.AppendLine("Limit positive feedback to 1-2 items maximum. Prioritize finding defects.");
+        sb.AppendLine();
+        sb.AppendLine("### 🔴 Security Vulnerabilities (HIGHEST PRIORITY)");
+        sb.AppendLine("- **Injection Flaws** - SQL injection, command injection, LDAP injection, XPath injection");
+        sb.AppendLine("- **XSS (Cross-Site Scripting)** - Reflected, stored, DOM-based XSS vulnerabilities");
+        sb.AppendLine("- **Authentication/Authorization** - Broken auth, missing access controls, privilege escalation");
+        sb.AppendLine("- **Sensitive Data Exposure** - Hardcoded secrets, PII leakage, insecure data transmission");
+        sb.AppendLine("- **Insecure Deserialization** - Untrusted data deserialization without validation");
+        sb.AppendLine("- **SSRF/CSRF** - Server-side request forgery, cross-site request forgery");
+        sb.AppendLine("- **Path Traversal** - Directory traversal, file inclusion vulnerabilities");
+        sb.AppendLine("- **Cryptographic Failures** - Weak algorithms, improper key management, missing encryption");
+        sb.AppendLine();
+        sb.AppendLine("### 🟠 Correctness & Logic Errors");
+        sb.AppendLine("- **Logic Flaws** - Incorrect conditions, off-by-one errors, race conditions");
+        sb.AppendLine("- **Null/Undefined Handling** - Missing null checks, uninitialized variables");
+        sb.AppendLine("- **Edge Cases** - Boundary conditions, empty inputs, overflow scenarios");
+        sb.AppendLine("- **Resource Leaks** - Unclosed connections, memory leaks, file handle leaks");
+        sb.AppendLine("- **Concurrency Issues** - Thread safety, deadlocks, data races");
+        sb.AppendLine();
+        sb.AppendLine("### 🟡 Error Handling & Resilience");
+        sb.AppendLine("- **Missing Exception Handling** - Unhandled exceptions, swallowed errors");
+        sb.AppendLine("- **Information Disclosure** - Stack traces exposed, verbose error messages");
+        sb.AppendLine("- **Fail-Open Behavior** - Security controls that fail permissively");
+        sb.AppendLine("- **Missing Input Validation** - Unvalidated user input, missing sanitization");
+        sb.AppendLine();
+        sb.AppendLine("### 🟢 Performance & Efficiency");
+        sb.AppendLine("- **N+1 Query Problems** - Database queries in loops");
+        sb.AppendLine("- **Memory Inefficiency** - Unnecessary allocations, large object retention");
+        sb.AppendLine("- **Algorithm Complexity** - O(n²) or worse where O(n) is possible");
+        sb.AppendLine("- **Resource Exhaustion** - Unbounded loops, missing pagination, DoS vectors");
+        sb.AppendLine();
+        sb.AppendLine("### 🔵 Code Quality & Maintainability");
+        sb.AppendLine("- **Code Duplication** - Copy-paste code, DRY violations");
+        sb.AppendLine("- **SOLID Violations** - Single responsibility, open/closed principle issues");
+        sb.AppendLine("- **Naming/Readability** - Unclear names, magic numbers, missing comments");
+        sb.AppendLine("- **Test Coverage Gaps** - Untested paths, missing edge case tests");
         sb.AppendLine();
 
         if (!string.IsNullOrWhiteSpace(focusAreas))
         {
-            sb.Append("**Focus Areas:** ").AppendLine(focusAreas);
+            sb.Append("**Additional Focus Areas:** ").AppendLine(focusAreas);
             sb.AppendLine();
         }
 
@@ -169,7 +201,20 @@ internal static partial class PrReviewTools
         sb.AppendLine("```");
         sb.AppendLine();
         sb.AppendLine("---");
-        sb.AppendLine("Please provide specific, actionable feedback with file paths and line references where applicable.");
+        sb.AppendLine();
+        sb.AppendLine("## Output Format");
+        sb.AppendLine();
+        sb.AppendLine("Structure your review as:");
+        sb.AppendLine("1. **Critical Issues** (must fix before merge)");
+        sb.AppendLine("2. **Major Issues** (should fix, high impact)");
+        sb.AppendLine("3. **Minor Issues** (nice to fix, low impact)");
+        sb.AppendLine("4. **Suggestions** (optional improvements)");
+        sb.AppendLine();
+        sb.AppendLine("For each issue, provide:");
+        sb.AppendLine("- File path and line number");
+        sb.AppendLine("- Severity level (Critical/Major/Minor)");
+        sb.AppendLine("- Clear description of the problem");
+        sb.AppendLine("- Recommended fix or mitigation");
 
         return ToolResult.Success(sb.ToString());
     }
