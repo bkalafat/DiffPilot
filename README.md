@@ -83,7 +83,7 @@ dotnet tool install -g DiffPilot
 
 ---
 
-## � Security
+## 🛡️ Security
 
 DiffPilot implements enterprise-grade security features:
 
@@ -102,7 +102,7 @@ See [SECURITY.md](SECURITY.md) for full documentation.
 
 ---
 
-## �📋 Use Cases
+## 📋 Use Cases
 
 ### 1. Self-Review Before PR
 ```
